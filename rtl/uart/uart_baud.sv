@@ -17,7 +17,7 @@
 
 module uart_baud (
     input  logic        clk,
-    input  logic        rst_b,
+    input  logic        rst_n,
     input  logic [15:0] cfg_div,            // cfg_div = F_clk/F_baud - 1
     input  logic        clear,              // Clear the clock divider counter and start a new sampling.
     output logic        baud_sample_6th,    // 6th sampling of the total 16 sampling
@@ -32,7 +32,7 @@ module uart_baud (
 
 
     always @(posedge clk) begin
-        if (!rst_b) begin
+        if (!rst_n) begin
             counter <= 12'b0;
         end
         else begin
@@ -42,7 +42,7 @@ module uart_baud (
     end
 
     always @(posedge clk) begin
-        if (!rst_b) begin
+        if (!rst_n) begin
             sample_count <= 4'b0;
         end
         else begin

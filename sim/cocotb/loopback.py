@@ -16,11 +16,11 @@ from cocotb.clock import Clock
 
 async def generate_reset(dut):
     """
-    Generate rst_b pulses.
+    Generate rst_n pulses.
     """
-    dut.rst_b.value = 0
+    dut.rst_n.value = 0
     await Timer(20, units="ns")
-    dut.rst_b.value = 1
+    dut.rst_n.value = 1
     await RisingEdge(dut.clk)
 
 async def init(dut):

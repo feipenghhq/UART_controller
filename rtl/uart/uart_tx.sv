@@ -12,7 +12,7 @@
 
 module uart_tx (
     input  logic        clk,
-    input  logic        rst_b,
+    input  logic        rst_n,
 
     input  logic [15:0] cfg_div,
     input  logic        cfg_txen,
@@ -53,7 +53,7 @@ module uart_tx (
 
     // state machine
     always @(posedge clk) begin
-        if (!rst_b) begin
+        if (!rst_n) begin
             tx_state <= IDLE;
         end
         else begin
@@ -82,7 +82,7 @@ module uart_tx (
     // uart_data
     // uart data include the start bit, the data bits and the stop bits
     always @(posedge clk) begin
-        if (!rst_b) begin
+        if (!rst_n) begin
             data_cnt <= 3'b0;
             stop_cnt <= 1'b0;
             uart_data <= 9'b1; // LSB should be reset to one to make uart_txd default high.
@@ -140,7 +140,7 @@ module uart_tx (
 
     uart_baud u_uart_baud(
         .clk                (clk),
-        .rst_b              (rst_b),
+        .rst_n              (rst_n),
         .cfg_div            (cfg_div),
         .clear              (baud_clear),
         .baud_sample_6th    (),

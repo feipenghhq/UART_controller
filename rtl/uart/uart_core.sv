@@ -12,7 +12,7 @@
 
 module uart_core (
     input           clk,
-    input           rst_b,
+    input           rst_n,
 
     input [15:0]    cfg_div,
     input           cfg_txen,

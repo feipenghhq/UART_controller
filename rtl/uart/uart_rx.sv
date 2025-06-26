@@ -12,7 +12,7 @@
 
 module uart_rx (
     input  logic        clk,
-    input  logic        rst_b,
+    input  logic        rst_n,
     input  logic [15:0] cfg_div,
     input  logic        cfg_rxen,
     input  logic        cfg_nstop,
@@ -60,7 +60,7 @@ module uart_rx (
 
     // Synchronization
     always @(posedge clk) begin
-        if (!rst_b) begin
+        if (!rst_n) begin
             uart_rxd_doublesync <= 2'b0;
         end
         else begin
@@ -74,7 +74,7 @@ module uart_rx (
     //  RX State Machine
     // state machine
     always @(posedge clk) begin
-        if (!rst_b) begin
+        if (!rst_n) begin
             rx_state <= IDLE;
         end
         else begin
@@ -105,7 +105,7 @@ module uart_rx (
 
     //  2/3 Majority voter
     always @(posedge clk) begin
-        if (!rst_b) begin
+        if (!rst_n) begin
             uart_rxd_sample <= 3'b0;
         end
         else begin
@@ -121,7 +121,7 @@ module uart_rx (
 
     //  Receive data and stop
     always @(posedge clk) begin
-        if (!rst_b) begin
+        if (!rst_n) begin
             data_cnt <= 3'b0;
             stop_cnt <= 1'b0;
             rx_data <= 8'b0;
@@ -162,7 +162,7 @@ module uart_rx (
 
     uart_baud u_uart_baud(
         .clk                (clk             ),
-        .rst_b              (rst_b           ),
+        .rst_n              (rst_n           ),
         .cfg_div            (cfg_div         ),
         .clear              (baud_clear      ),
         .baud_sample_6th    (baud_sample_6th ),
