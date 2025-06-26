@@ -1,0 +1,10 @@
+{signal: [
+    {name: 'clk', 		wave: 'p............'},
+    {name: 'uart_rx', 	wave: 'x10333333331x', data: ['D0', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7']},
+],
+   head:{
+   text:'Uart ',
+   tick:0,
+   every:1
+ },
+}
