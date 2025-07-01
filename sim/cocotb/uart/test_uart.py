@@ -27,12 +27,14 @@ async def init(dut):
     """
     Initialize the environment: setup clock, and reset the design
     """
+    # Set default signal value
     dut.tx_valid.value = 0
     dut.tx_data.value = 0
     dut.cfg_txen.value = 1
     dut.cfg_rxen.value = 1
     dut.cfg_nstop.value = 0
     dut.cfg_div.value = 432
+    # clock and reset
     cocotb.start_soon(Clock(dut.clk, 10, units = 'ns').start()) # clock
     await generate_reset(dut)
 
