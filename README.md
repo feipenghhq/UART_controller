@@ -4,9 +4,8 @@
   - [Introduction](#introduction)
   - [Features](#features)
   - [Overview](#overview)
-  - [Design](#design)
-    - [Uart Core](#uart-core)
-    - [Uart Host](#uart-host)
+  - [Uart Core](#uart-core)
+  - [Uart Host](#uart-host)
 
 
 ## Introduction
@@ -34,14 +33,15 @@ UART (Universal Asynchronous Receiver Transmitter) is a simple and commonly used
 - Transmit (TX) shift register and control logic
 - Receive (RX) shift register and control logic
 
-## Design
 
-### Uart Core
+## Uart Core
 
 The `uart_core` module implements the essential logic of the UART protocol, including transmission, reception, baud rate control, and basic framing.
 
 For detailed design documentation, see: [doc/uart_core.md](doc/uart_core.md).
 
-### Uart Host
+## Uart Host
 
 The `uart_host` module enables a PC to act as a host controller, accessing on-chip memory (e.g., BRAM or registers) via a UART interface. It interprets read and write commands received over UART and translates them into memory-mapped transactions. The module is fully parameterizable for address and data width, and designed for easy integration into FPGA-based systems requiring remote memory control or debugging via serial communication.
+
+For detailed design document, see [doc/uart_host.md](doc/uart_host.md).

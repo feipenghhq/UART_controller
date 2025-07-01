@@ -11,8 +11,8 @@
 // -------------------------------------------------------------------
 
 module uart_host #(
-    parameter ADDR_BYTE = 4,        // number of address byte
-    parameter DATA_BYTE = 4,        // number of data byte
+    parameter ADDR_BYTE = 2,        // number of address byte
+    parameter DATA_BYTE = 2,        // number of data byte
     parameter BAUD_RATE = 115200,   // baud rate
     parameter CLK_FREQ  = 100       // clock frequency
 ) (
@@ -35,6 +35,8 @@ module uart_host #(
     input  logic [8*DATA_BYTE-1:0] rdata      // read data
 );
 
+    localparam CFG_DIV = (CLK_FREQ * 1000000) / BAUD_RATE - 1;
+
     logic [15:0]    cfg_div;
     logic           cfg_txen;
     logic           cfg_rxen;
@@ -49,18 +51,19 @@ module uart_host #(
     localparam      ADDR    = 1;        // receive command from Uart
     localparam      DATA    = 2;        // receive data from Uart
     localparam      ACCESS  = 3;        // access the bus
-    localparam      SEND    = 4;        // send back the data to Uart
+    localparam      READ    = 4;        // Wait for the read data
+    localparam      SEND    = 5;        // send back the data to Uart
 
     logic [3:0]     state, state_next;
     logic           last_addr_byte;
     logic           last_data_byte;
-    logic           rhandshake_complete;  // read request handshake complete, waiting for read data
     logic [$clog2(ADDR_BYTE+1)-1:0] addr_cnt;
     logic [$clog2(DATA_BYTE+1)-1:0] data_cnt;
 
     localparam      CMD_READ  = 1;
     localparam      CMD_WRITE = 2;
     logic [7:0]     cmd;
+    logic           write_cmd;
 
     logic [$clog2(DATA_BYTE+1)-1:0] send_cnt;
     logic [DATA_BYTE-1:0][7:0]      rdata_s0;      // read data;
@@ -80,56 +83,68 @@ module uart_host #(
         state_next = state;
         case (state)
             IDLE: if (rx_valid) state_next = ADDR;
-            ADDR: if (rx_valid && last_addr_byte) state_next = DATA;
+            ADDR: begin
+                if (rx_valid && last_addr_byte) begin
+                    if (write_cmd) state_next = DATA;
+                    else           state_next = ACCESS;
+                end
+            end
             DATA: if (rx_valid && last_data_byte) state_next = ACCESS;
-            ACCESS: if (wvalid && wready) state_next = IDLE; // assuming action will complete before the next command arrives
-                    else if (rvalid)      state_next = SEND;
+            ACCESS: begin
+                if (wvalid && wready)      state_next = IDLE; // assuming action will complete before the next command arrives
+                else if (rvalid && rready) state_next = READ;
+            end
+            READ: if (rrvalid) state_next = SEND;
             SEND: if (tx_valid && tx_ready && last_send) state_next = IDLE;
         endcase
     end
 
     always @(posedge clk) begin
-        if (!rst_n) begin
-            cmd <= 0;
-        end
-        else begin
-            case(state)
-                IDLE: if (rx_valid) cmd <= rx_data;
-                ADDR: if (rx_valid) begin
+        case(state)
+            IDLE: begin
+                if (rx_valid) begin
+                    cmd <= rx_data;
+                end
+                address  <= '0;
+                addr_cnt <= '0;
+                data_cnt <= '0;
+            end
+            ADDR: begin
+                if (rx_valid) begin
                     address <= {rx_data, address[8*ADDR_BYTE-1:8]};
                     addr_cnt <= addr_cnt + 1'b1;
                 end
-                DATA: begin
-                    if (rx_valid) wdata <= {rx_data, wdata[8*DATA_BYTE-1:8]};
+            end
+            DATA: begin
+                if (rx_valid) begin
+                    wdata <= {rx_data, wdata[8*DATA_BYTE-1:8]};
                     data_cnt <= data_cnt + 1'b1;
                 end
-                ACCESS: if (rrvalid) rdata_s0 <= rdata;
-            endcase
-        end
+            end
+            READ: if (rrvalid) rdata_s0 <= rdata;
+        endcase
     end
 
+    assign write_cmd = (cmd == CMD_WRITE) ? 1'b1 : 1'b0;
     assign last_addr_byte = (addr_cnt == ADDR_BYTE-1);
     assign last_data_byte = (data_cnt == DATA_BYTE-1);
 
-    // command decode
+    // decode command and send request to the bus
     always @(posedge clk) begin
         if (!rst_n) begin
             wvalid <= 1'b0;
             rvalid <= 1'b0;
-            rhandshake_complete <= 1'b0;
         end
         else begin
             wvalid <= 1'b0;
-            if (state == ACCESS) begin
+            rvalid <= 1'b0;
+            if (state_next == ACCESS) begin // use next state here so the bus request align with state
                 case(cmd)
                     CMD_WRITE: begin
                         wvalid <= 1'b1;
                     end
                     CMD_READ: begin
-                        if (rvalid && rready) rvalid <= 1'b0;
-                        else                  rvalid <= ~rhandshake_complete;
-                        if (rvalid && rready) rhandshake_complete <= 1'b1;
-                        else if (rrvalid)     rhandshake_complete <= 1'b0;
+                        rvalid <= 1'b1;
                     end
                 endcase
             end
@@ -137,7 +152,7 @@ module uart_host #(
     end
 
     // uart core
-    assign cfg_div = CLK_FREQ/BAUD_RATE - 1;
+    assign cfg_div = CFG_DIV[15:0];
     assign cfg_txen = enable;
     assign cfg_rxen = enable;
     assign cfg_nstop = 0;
@@ -155,7 +170,7 @@ module uart_host #(
         end
     end
 
-    assign tx_valid = rrvalid | (send_cnt > 0);
+    assign tx_valid = (state == SEND) | (send_cnt > 0);
     assign tx_data  = rdata_s0[send_cnt];
     assign last_send = (send_cnt == DATA_BYTE-1);
 

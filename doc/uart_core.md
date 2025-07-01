@@ -9,7 +9,7 @@
     - [Ports](#ports-1)
     - [Implementation](#implementation-1)
   - [uart\_tx.sv](#uart_txsv)
-    - [IO Ports](#io-ports)
+    - [Ports](#ports-2)
     - [Implementation](#implementation-2)
 
 
@@ -101,7 +101,7 @@ To filtering out the potential noise on the uart_rxd signal, we use 16x oversamp
 
 ## uart_tx.sv
 
-### IO Ports
+### Ports
 
 | Name      | Direction | Width | Description                                          |
 | --------- | --------- | ----- | ---------------------------------------------------- |

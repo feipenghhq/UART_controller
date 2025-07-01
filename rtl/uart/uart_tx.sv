@@ -32,7 +32,7 @@ module uart_tx (
     logic baud_sample_16th;
     logic baud_clear;
 
-    logic [8:0] uart_data; // {data, start}
+    logic [9:0] uart_data; // {stop, data, start}
     logic [2:0] data_cnt;
     logic       stop_cnt;
     logic       last_data;
@@ -65,7 +65,7 @@ module uart_tx (
         tx_state_next = tx_state;
         case(tx_state)
             IDLE: begin
-                if (tx_valid && cfg_txen) tx_state_next = START;
+                if (tx_valid && tx_ready && cfg_txen) tx_state_next = START;
             end
             START: begin
                 if (baud_sample_16th) tx_state_next = DATA;
@@ -85,7 +85,7 @@ module uart_tx (
         if (!rst_n) begin
             data_cnt <= 3'b0;
             stop_cnt <= 1'b0;
-            uart_data <= 9'b1; // LSB should be reset to one to make uart_txd default high.
+            uart_data <= 10'b1; // LSB should be reset to one to make uart_txd default high.
             tx_ready <= 1'b0;
         end
         else begin
@@ -97,8 +97,11 @@ module uart_tx (
                     tx_ready <= 1'b1;
                     data_cnt <= 0;
                     stop_cnt <= 0;
-                    uart_data <= 9'h1;
-                    if (tx_valid) uart_data <= {tx_data, 1'b0}; // data, start
+                    uart_data <= 10'h1;
+                    if (tx_valid && tx_ready) begin
+                        uart_data <= {1'b1, tx_data, 1'b0}; // stop, data, start
+                        tx_ready <= 1'b0;
+                    end
                 end
                 START: begin
                     if (baud_sample_16th) begin
@@ -115,7 +118,6 @@ module uart_tx (
                     end
                 end
                 STOP: begin
-                    uart_data <= 9'b1;  // 1 indicate stop
                     if (baud_sample_16th) begin
                         stop_cnt <= stop_cnt + 1'b1;
                     end

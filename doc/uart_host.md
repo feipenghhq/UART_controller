@@ -83,5 +83,26 @@ The number of address byte and number of data byte is configurable through param
 
 ### State Machine
 
-![state machine](./assets/uart_host.drawio.svg)
+![state machine](./assets/uart_host_state.drawio.svg)
 
+The state machine is the main control logic for the uart host.
+
+In **IDLE** state, the logic is waiting for a new command. Once it receive a byte from the Uart core logic, this byte will
+be treated as the command. It then transfer to the **ADDR** state to receives the address.
+
+In **ADDR** state, the address of the transaction is received from the Uart core logic. The least significant byte is
+received first. Once all the address byte has been received, if the command is read command, it transfers to **ACCESS** state.
+If the command is write, it transfers to **DATA** state.
+
+In **DATA** state, the write data of the transaction is received from the Uart core logic. The least significant byte is
+received first. Once all the data byte has been received, it transfers to **ACCESS** state.
+
+In **ACCESS** state, the uart host logic will access the system bus to write or read the data. If the command is write,
+it simply put write request onto the bus and once the bus handshake complete, it transfers back to **IDLE** state.
+If the command is read, it put the read request onto the bus and then transfer to **READ** state.
+
+In **READ** state, the logic is waiting for the read data (response) from the bus, once the date is returned, it transfers
+to **SEND** state.
+
+In **SEND** state, the read data is sent to the host machine through Uart core logic. The least significant byte is
+received first. Once all the data byte is sent, it transfers back to IDLE state.
