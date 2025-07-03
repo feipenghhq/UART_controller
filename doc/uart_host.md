@@ -11,6 +11,9 @@ Use UART as a host interface to read/write on-chip memory (e.g., BRAM, registers
     - [Parameters](#parameters)
     - [Ports](#ports)
     - [State Machine](#state-machine)
+  - [UartHost Software](#uarthost-software)
+    - [Prerequisites](#prerequisites)
+    - [Script Usage](#script-usage)
 
 
 ## System Architecture
@@ -106,3 +109,51 @@ to **SEND** state.
 
 In **SEND** state, the read data is sent to the host machine through Uart core logic. The least significant byte is
 received first. Once all the data byte is sent, it transfers back to IDLE state.
+
+## UartHost Software
+
+A python script `UartHost.py` is written to interact with the uart_host module in the target FPGA to transfer data between the host machine and the FPGA logic. The script is located in `scripts/UartHost/UartHost.py`.
+
+### Prerequisites
+
+The following python packages are required to use the UartHost.py script:
+
+```shell
+# pyserial
+pip install pyserial
+
+# pyyaml
+pip install pyyaml
+```
+
+### Script Usage
+
+The script will enter a shell mode and user can type commands.
+
+```shell
+# Entering the shell mode
+python3 UartHost.py
+```
+
+The following commands are supported:
+
+```bash
+> help                            # print help message
+> exit                            # exit the command
+> read    <address>               # read date at <address>
+> write   <address> <data>        # write <data> to <address>
+> program <address> <file>        # program a RAM or continuous memory space starting at <address> using content in the <file>.
+```
+
+A config file named `config.yaml` is used to provide information about the target device for the script.
+The file is written in yaml and it must be put at the same directory as the UartHost.py script.
+
+Here are all the required field in the config file
+
+
+```yaml
+com_port: '/dev/ttyUSB1'     # The serial com port
+baud_rate: 115200            # baud rate of the uart_host module
+addr_byte: 2                 # number of addr byte
+data_byte: 2                 # number of data byte
+```

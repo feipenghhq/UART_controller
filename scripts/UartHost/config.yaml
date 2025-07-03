@@ -1,0 +1,4 @@
+com_port: '/dev/ttyUSB0'     # The serial com port
+baud_rate: 115200            # baud rate of the uart_host module
+addr_byte: 2                 # number of addr byte
+data_byte: 2                 # number of data byte

@@ -6,6 +6,7 @@
   - [Overview](#overview)
   - [Uart Core](#uart-core)
   - [Uart Host](#uart-host)
+  - [Repo Structure](#repo-structure)
 
 
 ## Introduction
@@ -24,7 +25,6 @@ In addition to the core UART module, the repo includes several related UART comp
   - 1 or 2 stop bits
 - 16x receive oversampling using 2/3 majority voting for improved noise immunity
 
-
 ## Overview
 
 UART (Universal Asynchronous Receiver Transmitter) is a simple and commonly used serial protocol. This controller implements basic UART protocol compliant logic including:
@@ -38,10 +38,30 @@ UART (Universal Asynchronous Receiver Transmitter) is a simple and commonly used
 
 The `uart_core` module implements the essential logic of the UART protocol, including transmission, reception, baud rate control, and basic framing.
 
-For detailed design documentation, see: [doc/uart_core.md](doc/uart_core.md).
+For detailed design documentation, read [doc/uart_core.md](doc/uart_core.md).
 
 ## Uart Host
 
 The `uart_host` module enables a PC to act as a host controller, accessing on-chip memory (e.g., BRAM or registers) via a UART interface. It interprets read and write commands received over UART and translates them into memory-mapped transactions. The module is fully parameterizable for address and data width, and designed for easy integration into FPGA-based systems requiring remote memory control or debugging via serial communication.
 
-For detailed design document, see [doc/uart_host.md](doc/uart_host.md).
+A python script is created to use the uart_host to interact with the target FPGA. The script is located in `scripts/UartHost` directory.
+
+For detailed design document, read [doc/uart_host.md](doc/uart_host.md).
+
+## Repo Structure
+
+```
+.
+├── doc
+├── fpga
+│   └── arty        # demo program on arty-a7 FPGA board
+├── LICENSE
+├── README.md
+├── rtl
+│   ├── uart        # Uart core module
+│   └── uart_host   # Uart Host module
+├── scripts
+│   ├── UartHost    # Uart Host script to interact with target FPGA
+│   └── vivado      # script for vivado
+└── sim             # testbench and simulation flow
+```
