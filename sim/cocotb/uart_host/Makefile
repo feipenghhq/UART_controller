@@ -6,7 +6,7 @@ REPO = $(shell git rev-parse --show-toplevel)
 SIM ?= icarus
 SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
-#WAVES = 1
+WAVES = 1
 
 VERILOG_SOURCES += $(shell find $(REPO)/rtl/uart -name "*.sv")
 VERILOG_SOURCES += $(shell find $(REPO)/rtl/uart_host -name "*.sv")

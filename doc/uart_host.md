@@ -4,9 +4,10 @@ Use UART as a host interface to read/write on-chip memory (e.g., BRAM, registers
 
 - [Uart Host](#uart-host)
   - [System Architecture](#system-architecture)
-  - [UART Command Format](#uart-command-format)
-    - [1. Write Command](#1-write-command)
-    - [2. Read Command](#2-read-command)
+  - [UART Command](#uart-command)
+    - [Format](#format)
+    - [List of Commands](#list-of-commands)
+    - [Command details](#command-details)
   - [Implementation](#implementation)
     - [Parameters](#parameters)
     - [Ports](#ports)
@@ -30,7 +31,9 @@ Use UART as a host interface to read/write on-chip memory (e.g., BRAM, registers
                                     +-------------------+
 ```
 
-## UART Command Format
+## UART Command
+
+### Format
 
 Each transaction consists of several uart byte. Here is the sequence of the bytes:
 
@@ -40,19 +43,50 @@ Command (1 byte) - Address (2-4 byte) - Data (2-4 byte)
 
 The number of address byte and number of data byte is configurable through parameters
 
-### 1. Write Command
+### List of Commands
+
+| Command            | CMD ID |
+| ------------------ | ------ |
+| Single Write       | 0x01   |
+| Single Read        | 0x02   |
+| Reset Assertion    | 0xFE   |
+| Reset De-assertion | 0xFF   |
+
+### Command details
+
+#### Reset Assert Command
+
+Assert the `rst_n_out`.
+
+| Byte Index | Description      |
+| ---------- | ---------------- |
+| 0          | Command = `0xFE` |
+
+#### Reset De-assert Command
+
+De-assert the `rst_n_out`.
+
+| Byte Index | Description      |
+| ---------- | ---------------- |
+| 0          | Command = `0xFF` |
+
+#### Write Command
+
+Single write.
 
 | Byte Index | Description              |
 | ---------- | ------------------------ |
-| 0          | Command = `0x01` (Write) |
+| 0          | Command = `0x03` (Write) |
 | 1\~4       | Address (32-bit)         |
 | 5\~8       | Data (32-bit)            |
 
-### 2. Read Command
+#### Read Command
+
+Single read.
 
 | Byte Index | Description             |
 | ---------- | ----------------------- |
-| 0          | Command = `0x02` (Read) |
+| 0          | Command = `0x04` (Read) |
 | 1\~4       | Address (32-bit)        |
 
 ## Implementation
@@ -68,21 +102,22 @@ The number of address byte and number of data byte is configurable through param
 
 ### Ports
 
-| Name     | Direction | Width       | Description         |
-| -------- | --------- | ----------- | ------------------- |
-| clk      | input     | 1           | Clock.              |
-| rst_n    | input     | 1           | Reset.              |
-| uart_rxd | input     | 1           | UART RX signal      |
-| uart_txd | output    | 1           | UART RX signal      |
-| enable   | input     | 1           | enable uart host    |
-| address  | output    | 8*ADDR_BYTE | Output address      |
-| wvalid   | output    | 1           | write request       |
-| wdata    | output    | 8*DATA_BYTE | write data          |
-| wready   | input     | 1           | write request ready |
-| rvalid   | output    | 1           | read request        |
-| rready   | input     | 1           | read request ready  |
-| rrvalid  | input     | 1           | read data valid     |
-| rdata    | input     | 8*DATA_BYTE | read data           |
+| Name      | Direction | Width       | Description         |
+| --------- | --------- | ----------- | ------------------- |
+| clk       | input     | 1           | Clock.              |
+| rst_n     | input     | 1           | Reset.              |
+| uart_rxd  | input     | 1           | UART RX signal      |
+| uart_txd  | output    | 1           | UART RX signal      |
+| enable    | input     | 1           | enable uart host    |
+| rst_n_out | output    | 1           | reset output        |
+| address   | output    | 8*ADDR_BYTE | Output address      |
+| wvalid    | output    | 1           | write request       |
+| wdata     | output    | 8*DATA_BYTE | write data          |
+| wready    | input     | 1           | write request ready |
+| rvalid    | output    | 1           | read request        |
+| rready    | input     | 1           | read request ready  |
+| rrvalid   | input     | 1           | read data valid     |
+| rdata     | input     | 8*DATA_BYTE | read data           |
 
 ### State Machine
 

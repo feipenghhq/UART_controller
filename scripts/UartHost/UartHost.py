@@ -89,6 +89,17 @@ class UartHost:
             print(f"[Read] Address = {hex(addr)}, read data = {hex(rdata)}")
         return rdata
 
+    def rst_cmd(self, rst=True, msg=False):
+        """
+        Reset Command
+        Args:
+            rst: True = assert the reset. False = de-assert the reset
+        """
+        if msg:
+            print(f"[RST] {'Assert' if rst else 'De-assert'} the reset")
+        cmd = 0xFE if rst else 0xFF
+        self.ser.write(cmd.to_bytes(1, byteorder='little'))
+
     def get_addr_byte(self):
         return self.addr_byte
 
@@ -105,7 +116,7 @@ class Interpreter():
     def run(self):
         task = {
             'help':    lambda args: print(Usage),
-            'exit':    lambda args: exit(0),
+            'exit':    lambda args: self.proc_exit(*args),
             'read':    lambda args: self.proc_read(*args),
             'write':   lambda args: self.proc_write(*args),
             'program': lambda args: self.proc_program(*args),
@@ -133,6 +144,9 @@ class Interpreter():
         print(f"Data returned from address {hex(addr)} is {hex(data)}")
 
     def proc_program(self, addr, file):
+        # keep the design under reset
+        print(f"Assert reset")
+        self.uart.rst_cmd(True, False)
         # convert addr string to value. Only support hex or dec value
         addr = self._str2int(addr)
         print(f"Program file to target FPGA. Starting address {addr}. File: {file}")
@@ -148,6 +162,12 @@ class Interpreter():
                 self.proc_write(addr, data)
                 # update addr, the addr here is byte address
                 addr = addr + addr_byte
+        print(f"De-assert reset")
+        self.uart.rst_cmd(False, False)
+
+    def proc_exit(self):
+        self.uart.close()
+        exit(0)
 
     def _str2int(self, s):
         """

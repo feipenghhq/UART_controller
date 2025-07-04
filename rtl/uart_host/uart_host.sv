@@ -24,7 +24,9 @@ module uart_host #(
     input  logic                   uart_rxd,
 
     input  logic                   enable,
+
     // output bus
+    output logic                   rst_n_out, // reset output
     output logic [8*ADDR_BYTE-1:0] address,   // address
     output logic                   wvalid,    // write request
     output logic [8*DATA_BYTE-1:0] wdata,     // write data
@@ -60,11 +62,14 @@ module uart_host #(
     logic [$clog2(ADDR_BYTE+1)-1:0] addr_cnt;
     logic [$clog2(DATA_BYTE+1)-1:0] data_cnt;
 
-    localparam      CMD_READ  = 1;
-    localparam      CMD_WRITE = 2;
+    localparam      CMD_READ  = 8'h1,
+                    CMD_WRITE = 8'h2,
+                    CMD_RST_A = 8'hFE,  // reset assertion
+                    CMD_RST_D = 8'hFF;  // reset de-assertion
     logic [7:0]     cmd;
     logic           write_cmd;
 
+    logic                           rst_cmd;       // reset related command
     logic [$clog2(DATA_BYTE+1)-1:0] send_cnt;
     logic [DATA_BYTE-1:0][7:0]      rdata_s0;      // read data;
     logic                           last_send;
@@ -82,7 +87,7 @@ module uart_host #(
     always @(*) begin
         state_next = state;
         case (state)
-            IDLE: if (rx_valid) state_next = ADDR;
+            IDLE: if (rx_valid & !rst_cmd) state_next = ADDR;
             ADDR: begin
                 if (rx_valid && last_addr_byte) begin
                     if (write_cmd) state_next = DATA;
@@ -100,11 +105,15 @@ module uart_host #(
     end
 
     always @(posedge clk) begin
+        if (!rst_n) cmd <= 0;
+        else if (state == IDLE && rx_valid) begin
+            cmd <= rx_data;
+        end
+    end
+
+    always @(posedge clk) begin
         case(state)
             IDLE: begin
-                if (rx_valid) begin
-                    cmd <= rx_data;
-                end
                 address  <= '0;
                 addr_cnt <= '0;
                 data_cnt <= '0;
@@ -125,6 +134,7 @@ module uart_host #(
         endcase
     end
 
+    assign rst_cmd = (rx_data == CMD_RST_A) | (rx_data == CMD_RST_D);
     assign write_cmd = (cmd == CMD_WRITE) ? 1'b1 : 1'b0;
     assign last_addr_byte = (addr_cnt == ADDR_BYTE-1);
     assign last_data_byte = (data_cnt == DATA_BYTE-1);
@@ -149,6 +159,13 @@ module uart_host #(
                 endcase
             end
         end
+    end
+
+    // output reset
+    always @(posedge clk) begin
+        if (!rst_n) rst_n_out <= 1'b0;
+        else if (cmd == CMD_RST_A) rst_n_out <= 1'b0;
+        else if (cmd == CMD_RST_D) rst_n_out <= 1'b1;
     end
 
     // uart core

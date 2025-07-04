@@ -14,7 +14,7 @@ from cocotb.triggers import FallingEdge, Timer
 
 class UartBFM:
 
-    def __init__(self, baud, nstop=1):
+    def __init__(self, baud, nstop=1, debug=False):
         """
         Args:
             baud : baud rate
@@ -22,6 +22,7 @@ class UartBFM:
         """
         self.baud = baud
         self.nstop = nstop
+        self.debug = debug
         # time interval for each uart transfer bit (in ns)
         self.interval = int(1000000000 / baud)
 
@@ -37,7 +38,8 @@ class UartBFM:
         """
         Send a byte through Uart
         """
-        self.txd._log.info(f"[UartBFM] Start sending byte {hex(byte)}")
+        if self.debug:
+            self.txd._log.info(f"[UartBFM] Start sending byte {hex(byte)}")
         # start condition
         await FallingEdge(self.clk)
         self.rxd.value = 0
@@ -51,7 +53,8 @@ class UartBFM:
         for _ in range(self.nstop):
             self.rxd.value = 1
             await Timer(self.interval, units="ns")
-        self.txd._log.info("[UartBFM] Complete sending byte")
+        if self.debug:
+            self.txd._log.info("[UartBFM] Complete sending byte")
 
     async def receive(self, data_list=None):
         """
@@ -63,7 +66,8 @@ class UartBFM:
         data = 0
         # wait for start condition
         await FallingEdge(self.txd)
-        self.rxd._log.info(f"[UartBFM] Start receiving data")
+        if self.debug:
+            self.rxd._log.info(f"[UartBFM] Start receiving data")
         # move the sample point to the center of a transfer
         await Timer(self.interval/2, units='ns')
         # Receive the data, LSb is received first
@@ -76,5 +80,6 @@ class UartBFM:
             assert(self.txd.value.integer)
         if data_list != None:
             data_list.append(data)
-        self.rxd._log.info(f"[UartBFM] Finished receiving data {hex(data)}")
+        if self.debug:
+            self.rxd._log.info(f"[UartBFM] Finished receiving data {hex(data)}")
         return data
