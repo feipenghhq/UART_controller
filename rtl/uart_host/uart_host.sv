@@ -149,7 +149,9 @@ module uart_host #(
             wvalid <= 1'b0;
             rvalid <= 1'b0;
             if (state_next == ACCESS) begin // use next state here so the bus request align with state
+                /* verilator lint_off CASEINCOMPLETE */
                 case(cmd)
+                /* verilator lint_on CASEINCOMPLETE */
                     CMD_WRITE: begin
                         wvalid <= 1'b1;
                     end
@@ -163,7 +165,7 @@ module uart_host #(
 
     // output reset
     always @(posedge clk) begin
-        if (!rst_n) rst_n_out <= 1'b0;
+        if (!rst_n) rst_n_out <= 1'b1;
         else if (cmd == CMD_RST_A) rst_n_out <= 1'b0;
         else if (cmd == CMD_RST_D) rst_n_out <= 1'b1;
     end
