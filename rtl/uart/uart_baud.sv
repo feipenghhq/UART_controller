@@ -31,7 +31,7 @@ module uart_baud (
     logic [3:0]  sample_count;
 
 
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             counter <= 12'b0;
         end
@@ -41,7 +41,7 @@ module uart_baud (
         end
     end
 
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             sample_count <= 4'b0;
         end

@@ -51,9 +51,6 @@ module uart_rx (
     logic [1:0] rx_state;
     logic [1:0] rx_state_next;
 
-    logic DATA_S;
-    logic STOP_S;
-
     // --------------------------------------------
     // Main logic
     // --------------------------------------------
@@ -73,7 +70,7 @@ module uart_rx (
 
     //  RX State Machine
     // state machine
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             rx_state <= IDLE;
         end
@@ -82,7 +79,7 @@ module uart_rx (
         end
     end
 
-    always @(*) begin
+    always_comb begin
         rx_state_next = rx_state;
         case(rx_state)
             IDLE: begin
@@ -104,7 +101,7 @@ module uart_rx (
     assign baud_clear = (rx_state == IDLE) & ~uart_rxd_sync;
 
     //  2/3 Majority voter
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             uart_rxd_sample <= 3'b0;
         end
@@ -120,7 +117,7 @@ module uart_rx (
                            (uart_rxd_sample[1] & uart_rxd_sample[2]) ;
 
     //  Receive data and stop
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             data_cnt <= 3'b0;
             stop_cnt <= 1'b0;

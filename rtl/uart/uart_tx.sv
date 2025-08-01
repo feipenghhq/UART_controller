@@ -52,7 +52,7 @@ module uart_tx (
     // --------------------------------------------
 
     // state machine
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             tx_state <= IDLE;
         end
@@ -61,7 +61,7 @@ module uart_tx (
         end
     end
 
-    always @(*) begin
+    always_comb begin
         tx_state_next = tx_state;
         case(tx_state)
             IDLE: begin
@@ -81,7 +81,7 @@ module uart_tx (
 
     // uart_data
     // uart data include the start bit, the data bits and the stop bits
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             data_cnt <= 3'b0;
             stop_cnt <= 1'b0;
