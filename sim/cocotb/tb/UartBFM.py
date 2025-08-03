@@ -7,7 +7,7 @@
 # Date Created: 06/26/2025
 #
 # -------------------------------------------------------------------
-# Uart BFM
+# UART BFM: act as a UART Host device
 # -------------------------------------------------------------------
 
 from cocotb.triggers import FallingEdge, Timer
@@ -26,9 +26,9 @@ class UartBFM:
         # time interval for each uart transfer bit (in ns)
         self.interval = int(1000000000 / baud)
 
-    def set_uart_signal(self, clk, txd, rxd):
+    def connect(self, clk, txd, rxd):
         """
-        Set Uart signal from DUT
+        Connect the Uart signal to RTL
         """
         self.clk = clk
         self.txd = txd

@@ -19,4 +19,4 @@ MODULE = "test_basic, test_loopback"
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
 waveform:
-	gtkwave sim_build/uart_core.fst &
+	gtkwave sim_build/$(TOPLEVEL).fst &

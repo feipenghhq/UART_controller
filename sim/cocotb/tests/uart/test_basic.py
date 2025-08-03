@@ -27,7 +27,7 @@ async def test_transmit(dut):
     Test transmit path. Takes about half minutes
     """
     bfm = UartBFM(115200)
-    bfm.set_uart_signal(dut.clk, dut.uart_txd, dut.uart_rxd)
+    bfm.connect(dut.clk, dut.uart_txd, dut.uart_rxd)
     num = 32
     await init(dut)
     for i in range(num):
@@ -43,7 +43,7 @@ async def test_receive(dut):
     Test receive path. Takes about half minutes
     """
     bfm = UartBFM(115200)
-    bfm.set_uart_signal(dut.clk, dut.uart_txd, dut.uart_rxd)
+    bfm.connect(dut.clk, dut.uart_txd, dut.uart_rxd)
     num = 32
     await init(dut)
     for i in range(num):

@@ -1,0 +1,46 @@
+[*]
+[*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
+[*] Sun Aug  3 03:50:12 2025
+[*]
+[dumpfile] "/home/feipenghhq/Desktop/IP/UART_controller/sim/cocotb/tests/uart2wb/sim_build/uart2wb.fst"
+[dumpfile_mtime] "Sun Aug  3 03:49:37 2025"
+[dumpfile_size] 13048
+[savefile] "/home/feipenghhq/Desktop/IP/UART_controller/sim/cocotb/tests/uart2wb/wave.gtkw"
+[timestart] 410110000
+[size] 1685 1243
+[pos] -1 -1
+*-22.000000 425560000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] uart2wb.
+[sst_width] 233
+[signals_width] 263
+[sst_expanded] 1
+[sst_vpaned_height] 368
+@28
+uart2wb.rx_valid
+@22
+uart2wb.rx_data[7:0]
+@200
+-
+@22
+uart2wb.state[3:0]
+@28
+uart2wb.last_addr_byte
+uart2wb.last_data_byte
+@200
+-
+@28
+uart2wb.wb_cyc_o
+uart2wb.wb_stb_o
+uart2wb.wb_we_o
+@22
+uart2wb.wb_adr_o[15:0]
+uart2wb.wb_dat_o[15:0]
+@28
+uart2wb.wb_stall_i
+uart2wb.wb_ack_i
+@22
+uart2wb.wb_dat_i[15:0]
+@29
+uart2wb.rx_valid
+[pattern_trace] 1
+[pattern_trace] 0

@@ -23,9 +23,15 @@ async def generate_reset(dut):
     dut.rst_n.value = 1
     await RisingEdge(dut.clk)
 
-async def init(dut):
+async def init(dut, period=10, baud=115200):
     """
-    Initialize the environment: setup clock, and reset the design
+    Initialize the environment:
+        - setup clock, and reset the design
+        - setup uart config.
+            - baud rate: 115200
+    Parameter:
+        - period (int): Clock Period in ns
+        - baud (int): Baud rate
     """
     # Set default signal value
     dut.tx_valid.value = 0
@@ -33,7 +39,7 @@ async def init(dut):
     dut.cfg_txen.value = 1
     dut.cfg_rxen.value = 1
     dut.cfg_nstop.value = 0
-    dut.cfg_div.value = 867 # 100MHz clock
+    dut.cfg_div.value = int(1000000000 / (baud * period))
     # clock and reset
-    cocotb.start_soon(Clock(dut.clk, 10, units = 'ns').start()) # clock
+    cocotb.start_soon(Clock(dut.clk, period, units = 'ns').start()) # clock
     await generate_reset(dut)
