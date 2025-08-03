@@ -1,0 +1,6 @@
+{
+    "com_port":  "/dev/ttyUSB0",
+    "baud_rate": 115200,
+    "addr_byte": 1,
+    "data_byte": 2
+}

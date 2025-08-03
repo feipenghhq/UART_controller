@@ -159,18 +159,24 @@ always @(posedge clk) begin
         IDLE: begin
             wb_adr_o <= '0;
             wb_dat_o <= '0;
-            addr_cnt <= ADDR_BYTE-1;
-            data_cnt <= DATA_BYTE-1;
+            addr_cnt <= ADDR_BYTE - 1;
+            data_cnt <= DATA_BYTE - 1;
         end
         ADDR: begin
             if (rx_valid) begin
-                wb_adr_o <= {rx_data, wb_adr_o[8*ADDR_BYTE-1:8]};
+                if (ADDR_BYTE > 1)
+                    wb_adr_o <= {rx_data, wb_adr_o[8*ADDR_BYTE-1:8]};
+                else
+                    wb_adr_o <= rx_data;
                 addr_cnt <= addr_cnt - 1'b1;
             end
         end
         DATA: begin
             if (rx_valid) begin
-                wb_dat_o <= {rx_data, wb_dat_o[8*DATA_BYTE-1:8]};
+                if (DATA_BYTE > 1)
+                    wb_dat_o <= {rx_data, wb_dat_o[8*DATA_BYTE-1:8]};
+                else
+                    wb_dat_o <= rx_data;
                 data_cnt <= data_cnt - 1'b1;
             end
         end

@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 """
 Copyright 2025 by Heqing Huang (feipenghhq@gamil.com)
 
@@ -8,42 +10,83 @@ Date Created: 06/30/2025
 
 Usage = \
 """
--------------------------------------------------------------------------------------------------------------------------------------------
-Script to use uart_host module to communicate with the target chip from the host machine
+------------------------------------------------------------------------------------------------------------------------
+UartDebug(1)
 
-Usage:
-    python3 UartHost.py # Entering interactive mode. Enter command you want to execute in the interactive shell
+NAME
+    UartDebug.py - Interactive shell to communicate with target FPGA
 
-Supported commands:
-    help                            # print help message
-    exit                            # exit the command
-    read    <address>               # read date at <address>
-    write   <address> <data>        # write <data> to <address>
-    program <address> <file>        # program a RAM or continuous memory space starting at <address> using content in the <file>.
-                                    # the address of the subsequence data will be calculated automatically
+SYNOPSIS
+    UartDebug.py
+    UartDebug.py file [addr]
 
-Config file:
-    A config file is used to provide information about the target device for the script.
-    The config file is written in yaml with the following parameters:
+DESCRIPTION
+    This python script communicates with the target FPGA using UART debug
+    interface. It provides an interactive shell for debugging, memory
+    access, and programming memory via UART
 
-    com_port: '/dev/ttyUSB1'     # The serial com port
-    baud_rate: 115200            # baud rate of the uart_host module
-    addr_byte: 2                 # number of addr byte
-    data_byte: 2                 # number of data byte
+PREREQUISITES:
+    This script requires the 'pyserial' Python package.
+    Install it using:
+        pip install pyserial
 
-    The cfg file must be put at the same directory as the UartHost.py script
--------------------------------------------------------------------------------------------------------------------------------------------
+USAGE
+    UartDebug.py
+        Start an interactive shell.
+
+    UartDebug.py file.hex [addr]
+        Program the file to FPGA RAM starting at optional addr (default is 0).
+
+SUPPORTED COMMANDS IN INTERACTIVE SHELL
+    help
+        Print help message.
+
+    exit
+        Exit the command shell.
+
+    read <addr>
+        Read data at the specified <addr>.
+
+    write <addr> <data>
+        Write <data> to the specified <addr>.
+
+    program <addr> <file>
+        Program a RAM or continuous memory space starting at <addr> using the
+        contents of <file>. The address of subsequent data is automatically
+        calculated.
+
+CONFIG FILE
+    The script uses a configuration file to define FPGA target parameters:
+
+    com_port
+        COM port for the UART
+
+    baud_rate
+        UART Baud rate
+
+    addr_byte
+        Number of address byte (e.g., 2).
+
+    data_byte
+        Number of data byte (e.g., 2).
+
+AUTHOR
+    Heqing Huang
+
+------------------------------------------------------------------------------------------------------------------------
 """
 
 import serial
-import yaml
+import json
+import argparse
+import sys
 
 class UartHost:
     """
     Class to interact with the Uart module in target FPGA
     """
 
-    def __init__(self, config_file='config.yaml'):
+    def __init__(self, config_file='config.json'):
         self.config_file=config_file
         self._get_config()
         self._open_serial()
@@ -53,11 +96,11 @@ class UartHost:
         Get the config from config file
         """
         with open(self.config_file, 'r') as file:
-            config_yaml = yaml.safe_load(file)
-            self.com_port = config_yaml['com_port']
-            self.baud_rate = config_yaml['baud_rate']
-            self.addr_byte = config_yaml['addr_byte']
-            self.data_byte = config_yaml['data_byte']
+            config = json.load(file)
+            self.com_port  = config['com_port']
+            self.baud_rate = config['baud_rate']
+            self.addr_byte = config['addr_byte']
+            self.data_byte = config['data_byte']
 
     def _open_serial(self):
         """
@@ -153,10 +196,10 @@ class Interpreter():
         addr_byte = self.uart.get_addr_byte()
         with open(file, 'r') as FH:
             lines = FH.readlines()
-            # check if the ram file is using binary or hex
-            is_binary = self._is_binary(lines[0].strip())
+            # check if the the line is using binary or hex
             for line in lines:
                 data = line.strip()
+                is_binary = self._is_binary(data)
                 if is_binary:
                     data = int(data, 2)
                 self.proc_write(addr, data)
@@ -189,11 +232,30 @@ class Interpreter():
         """
         return set(s).issubset({'0', '1'})
 
+def parse_args():
+    parser = argparse.ArgumentParser(prog='UartDebug.py', description=Usage, formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('file', nargs='?',
+        help='Hex file to be programmed to the target (optional in interactive mode)'
+    )
+    parser.add_argument('addr', nargs='?', type=lambda x: int(x, 0), default=0,
+        help='Start address (hex or dec). Defaults to 0.'
+    )
+    args = parser.parse_args()
+    return args
+
 def main():
-    uart_host = UartHost('config.yaml')
-    uart_host._get_config()
+    args = parse_args()
+    if args.help:
+        return
+    uart_host = UartHost('config.json')
     interpreter = Interpreter(uart_host)
-    interpreter.run()
+    if args.file:
+        file = args.file
+        addr = args.addr
+        interpreter.proc_program(addr, file)
+    else:
+        interpreter.run()
+    interpreter.proc_exit()
 
 if __name__ == '__main__':
     main()
