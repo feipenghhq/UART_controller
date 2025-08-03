@@ -1,5 +1,5 @@
 # KEY
-set_location_assignment PIN_G26 -to KEY
+set_location_assignment PIN_G26 -to RESETn
 
 # CLOCK
 set_location_assignment PIN_N2 -to CLOCK_50
