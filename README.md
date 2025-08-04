@@ -1,67 +1,77 @@
 # UART Controller
 
-- [UART Controller](#uart-controller)
-  - [Introduction](#introduction)
-  - [Features](#features)
-  - [Overview](#overview)
-  - [Uart Core](#uart-core)
-  - [Uart Host](#uart-host)
-  - [Repo Structure](#repo-structure)
-
-
 ## Introduction
 
-This repository contains a Universal Asynchronous Receiver/Transmitter (UART) controller written in **Verilog**.
-The UART module is designed for serial communication between FPGA/ASIC systems and external devices (e.g., terminals, microcontrollers, or PCs).
+This repo contains several useful UART design:
 
-In addition to the core UART module, the repo includes several related UART components and design examples.
+### UART Module
 
-## Features
+- UART Transmitter: [uart_tx.sv](rtl/uart/uart_tx.sv). Transmit data from FPGA to Host. Use AXI-Stream like interface.
+- UART Receiver: [uart_rx.sv](rtl/uart/uart_rx.sv). Receive data from Host to FPGA. Use AXI-Stream like interface.
+- UART Core: [uart_core.sv](rtl/uart/uart_core.sv). Bundled uart_tx and uart_rx together.
 
-- Supports 8-N-1 and 8-N-2 formats:
-  - 8 data bits
-  - No parity bit
-  - 1 start bit
-  - 1 or 2 stop bits
+**Features:**
+
+- AXI-Stream like interface.
+- Supports 8-N-1 and 8-N-2 formats,
+- Configurable baud rate.
 - 16x receive oversampling using 2/3 majority voting for improved noise immunity
 
-## Overview
+### UART Debug
 
-UART (Universal Asynchronous Receiver Transmitter) is a simple and commonly used serial protocol. This controller implements basic UART protocol compliant logic including:
-
-- Baud rate generator
-- Transmit (TX) shift register and control logic
-- Receive (RX) shift register and control logic
+- UART to Wishbone : [uart2wb.sv](rtl/uart_debug/uart2wb.sv).
+  - This design receives command from the host machine and then access the bus through Wishbone interface.
+  - It is a useful tools to program and debug a SoC system.
 
 
-## Uart Core
+## Design Implementation
 
-The `uart_core` module implements the essential logic of the UART protocol, including transmission, reception, baud rate control, and basic framing.
+Detailed design implementation document can be found in `doc` folder:
 
-For detailed design documentation, read [doc/uart_core.md](doc/uart_core.md).
+- UART Module: [doc/uart_core.md](doc/uart_core.md).
+- UART Debug: [doc/uart_debug.md](doc/uart_debug.md).
 
-## Uart Host
+## RTL File
 
-The `uart_host` module enables a PC to act as a host controller, accessing on-chip memory (e.g., BRAM or registers) via a UART interface. It interprets read and write commands received over UART and translates them into memory-mapped transactions. The module is fully parameterizable for address and data width, and designed for easy integration into FPGA-based systems requiring remote memory control or debugging via serial communication.
+### UART Module
 
-A python script is created to use the uart_host to interact with the target FPGA. The script is located in `scripts/UartHost` directory.
+| File                    | Description                            |
+| ----------------------- | -------------------------------------- |
+| `rtl/uart/uart_baud.sv` | counter to generate desired baud rate  |
+| `rtl/uart/uart_rx.sv`   | UART receiver module                   |
+| `rtl/uart/uart_tx.sv`   | UART transmitter module                |
+| `rtl/uart/uart_core.sv` | UART core, include uart_tx and uart_rx |
 
-For detailed design document, read [doc/uart_host.md](doc/uart_host.md).
+### UART Debug
 
-## Repo Structure
+| File                        | Description                 |
+| --------------------------- | --------------------------- |
+| `rtl/uart_debug/uart2wb.sv` | UART to wishbone controller |
 
-```
-.
-├── doc
-├── fpga
-│   └── arty        # demo program on arty-a7 FPGA board
-├── LICENSE
-├── README.md
-├── rtl
-│   ├── uart        # Uart core module
-│   └── uart_host   # Uart Host module
-├── scripts
-│   ├── UartHost    # Uart Host script to interact with target FPGA
-│   └── vivado      # script for vivado
-└── sim             # testbench and simulation flow
+## FPGA Demo
+
+Few FPGA demo programs are created to verify the UART design on real hardware:
+- UART Loopback: [fpga_uart_loopback.sv](./rtl/fpga_examples/fpga_uart_loopback.sv)
+  - Loop back the UART RX back to TX.
+- Uart2wb RAM: [fpga_uart2wb_ram.sv](rtl/fpga_examples/fpga_uart2wb_ram.sv)
+  - Use uart2wb to access FPGA on-chip ram.
+
+Supported FPGA boards:
+- Arty A7 35
+- Altera DE2
+
+### Building and Programming the FPGA Image
+
+If you have one of the FPGA board, Follow these steps to build and program the FPGA image:
+
+```shell
+# Go to program directory
+cd fpga/<board>/<program>
+
+# Arty FPGA - Require Xilinx Vivado tool
+make          # Build the FPGA image
+make pgm      # Program the FPGA
+
+# DE2 FPGA - Require Altera Quartus 13.0sp1 version
+make pgm      # Build the FPGA image and program the FPGA
 ```
