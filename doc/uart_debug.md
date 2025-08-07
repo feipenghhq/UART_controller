@@ -45,10 +45,10 @@ The number of address byte and number of data byte is configurable through param
 
 | Command            | Format                        | Description                |
 | ------------------ | ----------------------------- | -------------------------- |
-| Reset Assertion    | `0FE`                         | Assert the `rst_n_out`.    |
+| Reset Assertion    | `0xFE`                        | Assert the `rst_n_out`.    |
 | Reset De-assertion | `0xFF`                        | De-assert the `rst_n_out`. |
-| Write              | `0x01 - Address - Write Data` | Single write.              |
-| Read               | `0x02 - Address`              | Single read.               |
+| Single Write       | `0x01 - Address - Write Data` | Single write.              |
+| Single Read        | `0x02 - Address`              | Single read.               |
 
 ## Software
 

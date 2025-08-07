@@ -10,7 +10,7 @@
 # UART BFM: act as a UART Host device
 # -------------------------------------------------------------------
 
-from cocotb.triggers import FallingEdge, Timer
+from cocotb.triggers import FallingEdge, Timer, ReadWrite
 
 class UartBFM:
 
@@ -41,7 +41,7 @@ class UartBFM:
         if self.info:
             self.txd._log.info(f"[UART BFM] Start sending byte {hex(byte)}")
         # start condition
-        await FallingEdge(self.clk)
+        await ReadWrite()
         self.rxd.value = 0
         await Timer(self.interval, units="ns")
         # send data, LSb is send first

@@ -31,12 +31,17 @@ module wbram1rw #(
     output logic                    wb_stall_o
 );
 
-    localparam DEPTH = 2**ADDR_WIDTH;
+    localparam BYTE_OFFSET = $clog2(NUM_BYTES);
+    localparam DEPTH       = 2**(ADDR_WIDTH-BYTE_OFFSET);
 
     logic [NUM_BYTES-1:0][BYTE_WIDTH-1:0] ram[0:DEPTH-1];
+    logic [ADDR_WIDTH-1-BYTE_OFFSET:0]    wb_adr_word;
+
     logic                 we;
     logic [NUM_BYTES-1:0] be;
     logic                 wb_act;
+
+    assign wb_adr_word = wb_adr_i[ADDR_WIDTH-1:BYTE_OFFSET];
 
     assign wb_act = wb_cyc_i & wb_stb_i & ~wb_stall_o;
     assign we = wb_act & wb_we_i;
@@ -46,10 +51,10 @@ module wbram1rw #(
     begin
 	     if(we) begin
            for (int i = 0; i < NUM_BYTES; i = i + 1) begin
-             if(be[i]) ram[wb_adr_i][i] <= wb_dat_i[i*BYTE_WIDTH +: BYTE_WIDTH];
+             if(be[i]) ram[wb_adr_word][i] <= wb_dat_i[i*BYTE_WIDTH +: BYTE_WIDTH];
            end
        end
-       wb_dat_o <= ram[wb_adr_i];
+       wb_dat_o <= ram[wb_adr_word];
     end
 
     assign wb_stall_o = 1'b0;

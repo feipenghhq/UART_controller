@@ -245,8 +245,11 @@ def parse_args():
 
 def main():
     args = parse_args()
-    if args.help:
-        return
+    try:
+        if args.help:
+            return
+    except AttributeError:
+        pass
     uart_host = UartHost('config.json')
     interpreter = Interpreter(uart_host)
     if args.file:
