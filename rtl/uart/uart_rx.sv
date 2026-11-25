@@ -6,166 +6,188 @@
 // Author: Heqing Huang
 // Date Created: 06/25/2025
 //
+// Update: 11/24/2026
+// - Make it Uart16550 compatible
+//
 // -------------------------------------------------------------------
 // uart_rx: UART Receiver module
 // -------------------------------------------------------------------
 
 module uart_rx (
-    input  logic        clk,
-    input  logic        rst_n,
-    input  logic [15:0] cfg_div,
-    input  logic        cfg_rxen,
-    input  logic        cfg_nstop,
-    output logic        rx_valid,
-    output logic [7:0]  rx_data,
-    input  logic        uart_rxd
+    input              clk,
+    input              rst_n,
+    input [15:0]       cfg_div,   // The value set should be equal to (system clock speed) /(16 x desired baud rate)
+    input              cfg_rxen,
+    input [1:0]        cfg_word,
+    input              cfg_stop,
+    input              cfg_parity,
+    input              cfg_even_parity,
+    input              cfg_stick_parity,
+    output logic       rx_valid,
+    output logic [7:0] rx_data,
+    output logic       frame_error,
+    output logic       parity_error,
+    output logic       break_error,
+    input              uart_rxd
 );
 
     // --------------------------------------------
     //  Signal Declaration
     // --------------------------------------------
 
-    logic baud_sample_6th;
-    logic baud_sample_8th;
-    logic baud_sample_10th;
-    logic baud_sample_16th;
+    logic enable;
+    logic sample_tick;
+    logic baud_tick;
+    logic half_baud_tick;
+    logic bit_cnt_cmpl;
+    logic stop_cmpl;
     logic baud_clear;
 
-    logic [2:0] data_cnt;
-    logic       stop_cnt;
-    logic       last_data;
-    logic       last_stop;
+    logic uart_rxd_synced;
+    logic uart_rx_final;
 
-    logic [1:0] uart_rxd_doublesync;
-    logic       uart_rxd_sync;
+    logic parity_bit;
+    logic stop_bit;
+    logic stop_bit_stored;
 
-    logic [2:0] uart_rxd_sample;
-    logic       uart_rxd_vote;
+    logic rx_cmpl;
+
+    logic [1:0] uart_rxd_sync;
+    logic [2:0] bit_cnt;
+    logic [2:0] rx_vote3;
 
 
-    localparam IDLE  = 0;
-    localparam START = 1;
-    localparam DATA  = 2;
-    localparam STOP  = 3;
-
-    logic [1:0] rx_state;
-    logic [1:0] rx_state_next;
+    typedef enum logic [2:0] {IDLE, START, DATA, PARITY, STOP} state_t;
+    state_t state;
 
     // --------------------------------------------
-    // Main logic
+    //  main logic
     // --------------------------------------------
 
-    // Synchronization
-    always @(posedge clk) begin
-        if (!rst_n) begin
-            uart_rxd_doublesync <= 2'b0;
-        end
-        else begin
-            uart_rxd_doublesync[0] <= uart_rxd;
-            uart_rxd_doublesync[1] <= uart_rxd_doublesync[0];
-        end
+    assign enable = cfg_rxen & (cfg_div != 0);
+    assign bit_cnt_cmpl = (bit_cnt == 0) & baud_tick;
+
+    // - clear baud counter when we see a potential start signal to align the baud counter
+    assign baud_clear = ((state == IDLE) & ~uart_rxd_synced);
+
+    // double flop synchronization for the uart_rxd signal
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) uart_rxd_sync <= 2'b11;
+        else uart_rxd_sync <= {uart_rxd_sync[0], uart_rxd};
     end
 
-    assign uart_rxd_sync = uart_rxd_doublesync[1];
+    assign uart_rxd_synced = uart_rxd_sync[1];
 
-    //  RX State Machine
-    // state machine
-    always_ff @(posedge clk) begin
-        if (!rst_n) begin
-            rx_state <= IDLE;
-        end
-        else begin
-            rx_state <= rx_state_next;
-        end
+    // majority voter on 3 continuous input to filter input glitch
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) rx_vote3 <= 0;
+        else if (sample_tick) rx_vote3 <= {rx_vote3[1:0], uart_rxd_synced};
     end
 
     always_comb begin
-        rx_state_next = rx_state;
-        case(rx_state)
-            IDLE: begin
-                if (!uart_rxd_sync & cfg_rxen) rx_state_next = START;
-            end
-            START: begin
-                if      (!uart_rxd_vote & baud_sample_16th) rx_state_next = DATA;
-                else if (uart_rxd_vote & baud_sample_16th)  rx_state_next = IDLE;
-            end
-            DATA: begin
-                if (last_data & baud_sample_16th) rx_state_next = STOP;
-            end
-            STOP: begin
-                if (last_stop & baud_sample_16th) rx_state_next = IDLE;
-            end
+        case (rx_vote3)
+            3'b000: uart_rx_final = 1'b0;
+            3'b001: uart_rx_final = 1'b0;
+            3'b010: uart_rx_final = 1'b0;
+            3'b011: uart_rx_final = 1'b1;
+            3'b100: uart_rx_final = 1'b0;
+            3'b101: uart_rx_final = 1'b1;
+            3'b110: uart_rx_final = 1'b1;
+            3'b111: uart_rx_final = 1'b1;
         endcase
     end
 
-    assign baud_clear = (rx_state == IDLE) & ~uart_rxd_sync;
-
-    //  2/3 Majority voter
-    always_ff @(posedge clk) begin
-        if (!rst_n) begin
-            uart_rxd_sample <= 3'b0;
-        end
+    // main state machine
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) state <= IDLE;
         else begin
-            if (baud_sample_6th)  uart_rxd_sample[0] <= uart_rxd_sync;
-            if (baud_sample_8th)  uart_rxd_sample[1] <= uart_rxd_sync;
-            if (baud_sample_10th) uart_rxd_sample[2] <= uart_rxd_sync;
+        case(state)
+            IDLE:   if (!uart_rxd_synced && enable) state <= START;
+            START:
+                    if (half_baud_tick && uart_rx_final) state <= IDLE;
+                    else if (baud_tick) state <= DATA;
+            DATA:   if (bit_cnt_cmpl) state <= cfg_parity ? PARITY : STOP;
+            PARITY: if (bit_cnt_cmpl) state <= STOP;
+            STOP:   if (stop_cmpl)    state <= IDLE;
+            default: state <= IDLE;
+        endcase
         end
     end
 
-    assign uart_rxd_vote = (uart_rxd_sample[0] & uart_rxd_sample[1]) |
-                           (uart_rxd_sample[0] & uart_rxd_sample[2]) |
-                           (uart_rxd_sample[1] & uart_rxd_sample[2]) ;
-
-    //  Receive data and stop
-    always_ff @(posedge clk) begin
-        if (!rst_n) begin
-            data_cnt <= 3'b0;
-            stop_cnt <= 1'b0;
-            rx_data <= 8'b0;
-            rx_valid <= 1'b0;
-        end
-        else begin
-            rx_valid <= 1'b0;
-            case(rx_state)
-                IDLE: begin
-                    data_cnt <= 0;
-                    stop_cnt <= 0;
+    always @(posedge clk) begin
+        rx_cmpl <= 1'b0;
+        if (baud_tick) bit_cnt <= bit_cnt - 1'b1;
+        case(state)
+            IDLE: begin
+                bit_cnt <= 0;
+            end
+            START: begin
+                // clear the bit at START state, they are used at the beginning of the IDLE state
+                rx_data    <= 0;
+                parity_bit <= 0;
+                stop_bit   <= 0;
+                stop_bit_stored <= 0;
+                if (bit_cnt_cmpl) begin
+                    case(cfg_word)
+                        2'b00: bit_cnt <= 4;
+                        2'b01: bit_cnt <= 5;
+                        2'b10: bit_cnt <= 6;
+                        2'b11: bit_cnt <= 7;
+                    endcase
                 end
-                DATA: begin
-                    if (baud_sample_16th) begin
-                        // LSb received first
-                        rx_data <= {uart_rxd_vote, rx_data[7:1]};
-                        data_cnt <= data_cnt + 1'b1;
-                    end
+            end
+            DATA: begin
+                if (half_baud_tick) rx_data <= {uart_rx_final, rx_data[7:1]}; // right shift
+                if (bit_cnt_cmpl) begin
+                    if (cfg_parity) bit_cnt <= 0;
+                    else bit_cnt <= {2'b0, cfg_stop};
                 end
-                STOP: begin
-                    if (baud_sample_16th) begin
-                        stop_cnt <= stop_cnt + 1'b1;
-                    end
-                    if (baud_sample_16th && last_stop) begin
-                        rx_valid <= 1'b1;
-                    end
+            end
+            PARITY: begin
+                if (half_baud_tick) parity_bit <= uart_rx_final;
+                if (bit_cnt_cmpl) bit_cnt <= {2'b0, cfg_stop};
+            end
+            STOP: begin
+                // only check the first stop bit. (National Semiconductor PC16550D Datasheet)
+                if (half_baud_tick && !stop_bit_stored) begin
+                    stop_bit <= uart_rx_final;
+                    stop_bit_stored <= 1'b1;
                 end
-            endcase
-        end
+                rx_cmpl <= stop_cmpl;
+            end
+            default: begin end
+        endcase
     end
 
-    assign last_data = (data_cnt == 3'd7);
-    assign last_stop = (stop_cnt == cfg_nstop);
+    // final output
+    always @(posedge clk) begin
+        rx_valid     <= rx_cmpl;
+        break_error  <= ~(|{stop_bit, parity_bit, rx_data}); // all the received bits are zero
+        frame_error  <= ~stop_bit;
+        parity_error <= ~(cfg_even_parity^(cfg_stick_parity ? parity_bit : parity_bit^(^rx_data)));
+    end
+
+    // check when stop bit complete
+    always_comb begin
+        stop_cmpl = 1'b0;
+        if ((cfg_word != 0) || (cfg_stop == 0))  // 1 stop bit or 2 stop bit
+            stop_cmpl = bit_cnt_cmpl;
+        else // 1.5 stop bit
+            stop_cmpl = (bit_cnt == 0) & half_baud_tick;
+    end
 
     // --------------------------------------------
     //  Module instantiation
     // --------------------------------------------
 
     uart_baud u_uart_baud(
-        .clk                (clk             ),
-        .rst_n              (rst_n           ),
-        .cfg_div            (cfg_div         ),
-        .clear              (baud_clear      ),
-        .baud_sample_6th    (baud_sample_6th ),
-        .baud_sample_8th    (baud_sample_8th ),
-        .baud_sample_10th   (baud_sample_10th),
-        .baud_sample_16th   (baud_sample_16th)
+        .clk            (clk),
+        .rst_n          (rst_n),
+        .cfg_div        (cfg_div),
+        .clear          (baud_clear),
+        .sample_tick    (sample_tick),
+        .baud_tick      (baud_tick),
+        .half_baud_tick (half_baud_tick)
     );
 
 endmodule

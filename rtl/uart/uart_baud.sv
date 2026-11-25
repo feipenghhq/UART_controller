@@ -7,54 +7,41 @@
 // Date Created: 06/25/2025
 //
 // -------------------------------------------------------------------
-// uart_baud: generate baud tick for TX/RX module
-//
-// Implementation Notes:
-// The TX module use 16 over-sampling and a 2/3 majority vote to determine the input value.
-// it sample the input RX at 6, 8, 10-th sample to get the 3 value for majority vote.
-// Because of that, the baud module will generate pulse for 6/8/10th and 16th sample
+// uart_baud: generate sample for TX/RX module
 // -------------------------------------------------------------------
 
 module uart_baud (
-    input  logic        clk,
-    input  logic        rst_n,
-    input  logic [15:0] cfg_div,            // cfg_div = F_clk/F_baud - 1
-    input  logic        clear,              // Clear the clock divider counter and start a new sampling.
-    output logic        baud_sample_6th,    // 6th sampling of the total 16 sampling
-    output logic        baud_sample_8th,    // 8th sampling of the total 16 sampling
-    output logic        baud_sample_10th,   // 10th sampling of the total 16 sampling
-    output logic        baud_sample_16th    // 16th sampling of the total 16 sampling
+    input        clk,
+    input        rst_n,
+    input [15:0] cfg_div,           // Number of clock cycles per 16x sampling tick
+    input        clear,
+    output logic sample_tick,       // 16x baud (fast)
+    output logic baud_tick,         // 1x baud (slow)
+    output logic half_baud_tick     // half of 1x baud
 );
 
-    logic        tick;
-    logic [11:0] counter;       // number of clock cycle for each sample
-    logic [3:0]  sample_count;
+    logic [15:0] div;
+    logic [15:0] sample_cnt;
+    logic [3:0]  baud_cnt;
 
+    assign div = cfg_div - 1'b1;
 
-    always_ff @(posedge clk) begin
+    assign sample_tick = sample_cnt == 0;
+    assign baud_tick = (baud_cnt == 0) & sample_tick;
+    assign half_baud_tick = (baud_cnt == 8) & sample_tick;
+
+    always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            counter <= 12'b0;
+            sample_cnt <= 0;
+            baud_cnt <= 0;
         end
         else begin
-            if (clear || tick) counter <= cfg_div[15:4];
-            else counter <= counter - 1'b1;
+            if (sample_tick || clear) sample_cnt <= div;
+            else sample_cnt <= sample_cnt - 1'b1;
+
+            if (baud_tick || clear) baud_cnt <= 15;
+            else if (sample_tick) baud_cnt <= baud_cnt - 1'b1;
         end
     end
-
-    always_ff @(posedge clk) begin
-        if (!rst_n) begin
-            sample_count <= 4'b0;
-        end
-        else begin
-            if (clear || baud_sample_16th) sample_count <= 0;
-            else if (tick) sample_count <= sample_count + 1'b1;
-        end
-    end
-
-    assign tick = (counter == 12'b1); // last count is 1 instead of 0.
-    assign baud_sample_6th  = tick & (sample_count == 4'd5);
-    assign baud_sample_8th  = tick & (sample_count == 4'd7);
-    assign baud_sample_10th = tick & (sample_count == 4'd9);
-    assign baud_sample_16th = tick & (sample_count == 4'd15);
 
 endmodule

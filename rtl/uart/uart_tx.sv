@@ -6,149 +6,139 @@
 // Author: Heqing Huang
 // Date Created: 06/25/2025
 //
+// Update: 11/24/2026
+// - Make it Uart16550 compatible
+//
 // -------------------------------------------------------------------
 // uart_tx: UART Transmit module
 // -------------------------------------------------------------------
 
 module uart_tx (
-    input  logic        clk,
-    input  logic        rst_n,
-
-    input  logic [15:0] cfg_div,
-    input  logic        cfg_txen,
-    input  logic        cfg_nstop,
-
-    input  logic        tx_valid,
-    input  logic [7:0]  tx_data,
-    output logic        tx_ready,
-
-    output logic        uart_txd
+    input        clk,
+    input        rst_n,
+    input [15:0] cfg_div,   // The value set should be equal to (system clock speed) /(16 x desired baud rate)
+    input        cfg_txen,
+    input [1:0]  cfg_word,
+    input        cfg_stop,
+    input        cfg_parity,
+    input        cfg_even_parity,
+    input        cfg_stick_parity,
+    input        cfg_break,
+    input        tx_valid,
+    input [7:0]  tx_data,
+    output logic tx_ready,
+    output logic uart_txd
 );
 
     // --------------------------------------------
     //  Signal Declaration
     // --------------------------------------------
 
-    logic baud_sample_16th;
+    logic req;
+    logic enable;
+    logic baud_tick;
+    logic half_baud_tick;
+    logic bit_cnt_cmpl;
+    logic stop_cmpl;
     logic baud_clear;
+    logic parity_bit;
 
-    logic [9:0] uart_data; // {stop, data, start}
-    logic [2:0] data_cnt;
-    logic       stop_cnt;
-    logic       last_data;
-    logic       last_stop;
+    logic [7:0] buffer;
+    logic [2:0] bit_cnt;
 
-    // state machine
-    localparam IDLE  = 0;
-    localparam START = 1;
-    localparam DATA  = 2;
-    localparam STOP  = 3;
 
-    logic [1:0] tx_state;
-    logic [1:0] tx_state_next;
+    typedef enum logic [2:0] {IDLE, START, DATA, PARITY, STOP} state_t;
+    state_t state;
 
     // --------------------------------------------
-    // Main logic
+    //  main logic
     // --------------------------------------------
 
-    // state machine
-    always_ff @(posedge clk) begin
-        if (!rst_n) begin
-            tx_state <= IDLE;
-        end
+    assign enable = cfg_txen & (cfg_div != 0);
+    assign req = tx_valid & tx_ready & enable;
+    assign bit_cnt_cmpl = (bit_cnt == 0) & baud_tick;
+    assign baud_clear = (state == IDLE) & req;
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) state <= IDLE;
         else begin
-            tx_state <= tx_state_next;
+        case(state)
+            IDLE:   if (req)          state <= START;
+            START:  if (bit_cnt_cmpl) state <= DATA;
+            DATA:   if (bit_cnt_cmpl) state <= cfg_parity ? PARITY : STOP;
+            PARITY: if (bit_cnt_cmpl) state <= STOP;
+            STOP:   if (stop_cmpl)    state <= IDLE;
+            default: state <= IDLE;
+        endcase
         end
     end
 
-    always_comb begin
-        tx_state_next = tx_state;
-        case(tx_state)
+    always @(posedge clk or negedge rst_n) begin
+        tx_ready <= 1'b0;
+        uart_txd <= 1'b1;
+        if (baud_tick) bit_cnt <= bit_cnt - 1'b1;
+        case(state)
             IDLE: begin
-                if (tx_valid && tx_ready && cfg_txen) tx_state_next = START;
+                uart_txd <= 1'b1;
+                buffer <= tx_data;
+                tx_ready <= ~req & enable;
+                bit_cnt <= 0;
+                parity_bit <= (^tx_data) ^ cfg_even_parity;
             end
             START: begin
-                if (baud_sample_16th) tx_state_next = DATA;
+                uart_txd <= 1'b0;
+                if (bit_cnt_cmpl) begin
+                    case(cfg_word)
+                        2'b00: bit_cnt <= 4;
+                        2'b01: bit_cnt <= 5;
+                        2'b10: bit_cnt <= 6;
+                        2'b11: bit_cnt <= 7;
+                    endcase
+                end
             end
             DATA: begin
-                if (baud_sample_16th && last_data) tx_state_next = STOP;
+                uart_txd <= buffer[0];
+                if (baud_tick) buffer <= (buffer >> 1);
+                if (bit_cnt_cmpl) begin
+                    if (cfg_parity) bit_cnt <= 0;
+                    else bit_cnt <= {2'b0, cfg_stop};
+                end
+            end
+            PARITY: begin
+                uart_txd <= cfg_stick_parity ? ~cfg_even_parity : parity_bit;
+                if (bit_cnt_cmpl) bit_cnt <= {2'b0, cfg_stop};
             end
             STOP: begin
-                if (baud_sample_16th && last_stop) tx_state_next = IDLE;
+                uart_txd <= 1'b1;
             end
+            default: begin end
         endcase
+
+        if (cfg_break) uart_txd <= 1'b0;
+
     end
 
-    // uart_data
-    // uart data include the start bit, the data bits and the stop bits
-    always_ff @(posedge clk) begin
-        if (!rst_n) begin
-            data_cnt <= 3'b0;
-            stop_cnt <= 1'b0;
-            uart_data <= 10'b1; // LSB should be reset to one to make uart_txd default high.
-            tx_ready <= 1'b0;
-        end
-        else begin
-
-            tx_ready <= 1'b0;
-
-            case (tx_state)
-                IDLE: begin
-                    tx_ready <= 1'b1;
-                    data_cnt <= 0;
-                    stop_cnt <= 0;
-                    uart_data <= 10'h1;
-                    if (tx_valid && tx_ready) begin
-                        uart_data <= {1'b1, tx_data, 1'b0}; // stop, data, start
-                        tx_ready <= 1'b0;
-                    end
-                end
-                START: begin
-                    if (baud_sample_16th) begin
-                        uart_data <= (uart_data >> 1);
-                    end
-                end
-                DATA: begin
-                    // The UART module transmits and receives the Least Significant bit (LSb) first
-                    // Shift on the 16th sample tick in START and DATA state.
-                    // No need to shift on the STOP state as the data is fixed to 1 for stop bit.
-                    if (baud_sample_16th) begin
-                        uart_data <= (uart_data >> 1);
-                        data_cnt <= data_cnt + 1'b1;
-                    end
-                end
-                STOP: begin
-                    if (baud_sample_16th) begin
-                        stop_cnt <= stop_cnt + 1'b1;
-                    end
-                end
-            endcase
-        end
+    // check when stop bit complete
+    always_comb begin
+        stop_cmpl = 1'b0;
+        if ((cfg_word != 0) || (cfg_stop == 0))  // 1 stop bit or 2 stop bit
+            stop_cmpl = bit_cnt_cmpl;
+        else // 1.5 stop bit
+            stop_cmpl = (bit_cnt == 0) & half_baud_tick;
     end
-
-    assign last_data = (data_cnt == 3'd7);
-    assign last_stop = (stop_cnt == cfg_nstop);
-
-    // --------------------------------------------
-    // uart_txd and misc
-    // --------------------------------------------
-
-    assign uart_txd = uart_data[0];
-    assign baud_clear = (tx_state == IDLE) & tx_valid;
 
     // --------------------------------------------
     //  Module instantiation
     // --------------------------------------------
 
     uart_baud u_uart_baud(
-        .clk                (clk),
-        .rst_n              (rst_n),
-        .cfg_div            (cfg_div),
-        .clear              (baud_clear),
-        .baud_sample_6th    (),
-        .baud_sample_8th    (),
-        .baud_sample_10th   (),
-        .baud_sample_16th   (baud_sample_16th)
+        .clk            (clk),
+        .rst_n          (rst_n),
+        .cfg_div        (cfg_div),
+        .clear          (baud_clear),
+        .sample_tick    (),
+        .baud_tick      (baud_tick),
+        .half_baud_tick (half_baud_tick)
     );
 
 endmodule
