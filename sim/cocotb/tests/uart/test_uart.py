@@ -13,6 +13,7 @@
 import sys
 
 sys.path.append('../../tb')
+sys.path.append('../../bfm')
 
 import random
 
