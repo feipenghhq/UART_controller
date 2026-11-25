@@ -6,6 +6,7 @@
 **.out
 **results.xml
 **sim_build
+**dump.fst
 
 # Synthesis output
 **outputs

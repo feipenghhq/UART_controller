@@ -3,9 +3,9 @@
 REPO = $(shell git rev-parse --show-toplevel)
 
 # defaults
-SIM ?= icarus
+SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
-#WAVES = 1
+
 
 VERILOG_SOURCES += $(shell find $(REPO)/rtl/uart -name "*.sv")
 
@@ -13,10 +13,17 @@ VERILOG_SOURCES += $(shell find $(REPO)/rtl/uart -name "*.sv")
 TOPLEVEL = uart_core
 
 # MODULE is the basename of the Python test file
-MODULE = "test_basic, test_loopback"
+MODULE = "test_basic"
 
 # include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
+# Enable waveform generation.
+ifeq ($(SIM), verilator)
+ifeq ($(WAVES),1)
+EXTRA_ARGS += --trace --trace-fst --trace-structs
+endif
+endif
+
 waveform:
-	gtkwave sim_build/$(TOPLEVEL).fst &
+	gtkwave dump.fst &

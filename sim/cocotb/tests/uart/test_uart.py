@@ -11,44 +11,59 @@
 # -------------------------------------------------------------------
 
 import sys
+
 sys.path.append('../../tb')
 
 import random
-import cocotb
-from cocotb.triggers import FallingEdge
 
-from Env import *
-from AXISBFM import *
-from UartBFM import *
+import cocotb
+from Env import init
+from UartBFM import UartBFM
+from UartCoreBFM import uart_core_receive, uart_core_send
+
 
 @cocotb.test()
-async def test_transmit(dut):
+async def test_transmit(dut, num=8):
     """
-    Test transmit path. Takes about half minutes
+    Test transmit path.
     """
     bfm = UartBFM(115200)
     bfm.connect(dut.clk, dut.uart_txd, dut.uart_rxd)
-    num = 32
     await init(dut)
     for i in range(num):
         value = random.randint(0, 255)
         rcv = cocotb.start_soon(bfm.receive())
-        await axis_send(dut, value)
+        await uart_core_send(dut, value)
         data = await rcv
         assert(value == data)
 
 @cocotb.test()
-async def test_receive(dut):
+async def test_receive(dut, num=8):
     """
-    Test receive path. Takes about half minutes
+    Test receive path.
     """
     bfm = UartBFM(115200)
     bfm.connect(dut.clk, dut.uart_txd, dut.uart_rxd)
-    num = 32
+
     await init(dut)
     for i in range(num):
         value = random.randint(0, 255)
-        rcv = cocotb.start_soon(axis_receive(dut))
+        receive = cocotb.start_soon(uart_core_receive(dut))
         await bfm.send(value)
-        data = await rcv
+        data, _, _, _ = await receive
+        assert(value == data)
+
+@cocotb.test()
+async def loopback(dut, num=8):
+    """
+    Uart Loopback test.
+    """
+    bfm = UartBFM(115200)
+    bfm.connect(dut.clk, dut.uart_txd, dut.uart_rxd)
+    await init(dut)
+    cocotb.start_soon(bfm.loopback(dut))
+    for i in range(num):
+        value = random.randint(0, 255)
+        await uart_core_send(dut, value)
+        data, _, _, _ = await uart_core_receive(dut)
         assert(value == data)
