@@ -10,7 +10,7 @@
 # Uart Core BFM
 # -------------------------------------------------------------------
 
-from cocotb.triggers import ReadOnly, ReadWrite, RisingEdge
+from cocotb.triggers import ReadWrite, RisingEdge
 
 
 async def uart_core_send(dut, data, info=False):

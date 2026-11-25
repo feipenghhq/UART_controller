@@ -43,11 +43,11 @@ module uart2wb #(
     input  logic            wb_stall_i
 );
 
-/////////////////////////////////////////////////
+// --------------------------------------------
 // Signal Declaration
-/////////////////////////////////////////////////
+// --------------------------------------------
 
-localparam DIV = (CLK_FREQ * 1000000) / BAUD_RATE - 1;
+localparam DIV = (CLK_FREQ * 1000000) / (16 * BAUD_RATE);
 
 typedef enum logic [3:0] {
     IDLE,
@@ -74,15 +74,23 @@ logic           rst_cmd;
 
 logic           wb_act; // bus action
 
-logic [15:0]    cfg_div;
-logic           cfg_txen;
-logic           cfg_rxen;
-logic           cfg_nstop;
-logic           tx_valid;
-logic [7:0]     tx_data;
-logic           tx_ready;
-logic           rx_valid;
-logic [7:0]     rx_data;
+logic [15:0] cfg_div;
+logic        cfg_txen;
+logic        cfg_rxen;
+logic [1:0]  cfg_word;
+logic        cfg_stop;
+logic        cfg_parity;
+logic        cfg_even_parity;
+logic        cfg_stick_parity;
+logic        cfg_break;
+logic        tx_valid;
+logic [7:0]  tx_data;
+logic        tx_ready;
+logic        rx_valid;
+logic [7:0]  rx_data;
+logic        frame_error;
+logic        parity_error;
+logic        break_error;
 
 logic           last_addr_byte;
 logic           last_data_byte;
@@ -94,9 +102,9 @@ logic [$clog2(DATA_BYTE+1)-1:0] send_cnt;
 logic [DATA_BYTE-1:0][7:0]      read_data;      // read data;
 logic                           last_send;
 
-/////////////////////////////////////////////////
-// signal declaration
-/////////////////////////////////////////////////
+// --------------------------------------------
+// Main logic
+// --------------------------------------------
 
 // state machine
 always @(posedge clk) begin
@@ -240,7 +248,11 @@ assign last_send = send_cnt == DATA_BYTE - 1;
 assign cfg_div = DIV[15:0];
 assign cfg_txen = enable;
 assign cfg_rxen = enable;
-assign cfg_nstop = 0;
+assign cfg_stop = 0;
+assign cfg_parity = 0;
+assign cfg_even_parity = 0;
+assign cfg_stick_parity = 0;
+assign cfg_break = 0;
 
 uart_core
 u_uart_core (.*);

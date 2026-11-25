@@ -12,7 +12,9 @@
 # -------------------------------------------------------------------
 
 import random
-from cocotb.triggers import RisingEdge, ReadWrite
+
+from cocotb.triggers import ReadWrite, RisingEdge
+
 
 class WbDeviceBFM:
 
@@ -65,17 +67,20 @@ class WbDeviceBFM:
         self.wb_ack_o.value = 0
         self.wb_stall_o.value = 0
 
-    async def single_write(self, stall=0):
+    async def write_resp(self, stall=0):
         """
         Process a SINGLE pipelined write request
         Parameter:
             - stall (int): stall cycle. 0: no stall. > 0: stall `stall` cycle. < 0: random cycle within [0, -stall]
         """
+        read_write = ReadWrite()
+        rising_edge = RisingEdge(self.clk)
+
         # wait for the assertion of wb_stb_i
-        await ReadWrite()
+        await read_write
         while(self.wb_stb_i.value == 0):
-            await RisingEdge(self.clk)
-            await ReadWrite()
+            await rising_edge
+            await read_write
         if (self.wb_cyc_i.value != 1):
             assert ValueError, self.dut._log.error("wb_cyc_o should be asserted when wb_stb_o is asserted!")
         if (self.wb_we_i.value != 0):
@@ -87,35 +92,38 @@ class WbDeviceBFM:
                 stall = random.randint(0, -stall)
             self.wb_stall_o.value = 1
             for _ in range(stall):
-                await RisingEdge(self.clk)
-                await ReadWrite()
+                await rising_edge
+                await read_write
             self.wb_stall_o.value = 0
 
         # store the data into local 'ram'
-        addr = self.wb_adr_i.value.integer
-        data = self.wb_dat_i.value.integer
+        addr = self.wb_adr_i.value.to_unsigned()
+        data = self.wb_dat_i.value.to_unsigned()
         self.ram[addr] = data
 
         # send ack
-        await RisingEdge(self.clk)
-        await ReadWrite()
+        await rising_edge
+        await read_write
         self.wb_ack_o.value = 1
-        await RisingEdge(self.clk)
-        await ReadWrite()
+        await rising_edge
+        await read_write
         self.wb_ack_o.value = 0
         return data
 
-    async def single_read(self, stall=0):
+    async def read_resp(self, stall=0):
         """
         Process a SINGLE pipelined read request
         Parameter:
             - stall (int): stall cycle. 0: no stall. > 0: stall `stall` cycle. < 0: random cycle within [0, -stall]
         """
+        read_write = ReadWrite()
+        rising_edge = RisingEdge(self.clk)
+
         # wait for the assertion of wb_stb_i
-        await ReadWrite()
+        await read_write
         while(self.wb_stb_i.value == 0):
-            await RisingEdge(self.clk)
-            await ReadWrite()
+            await rising_edge
+            await read_write
         if (self.wb_cyc_i.value != 1):
             assert ValueError, self.dut._log.error("wb_cyc_o should be asserted when wb_stb_o is asserted!")
         if (self.wb_we_i.value != 1):
@@ -127,22 +135,22 @@ class WbDeviceBFM:
                 stall = random.randint(0, -stall)
             self.wb_stall_o.value = 1
             for _ in range(stall):
-                await RisingEdge(self.clk)
-                await ReadWrite()
+                await rising_edge
+                await read_write
             self.wb_stall_o.value = 0
 
         # capture address
-        addr = self.wb_adr_i.value.integer
+        addr = self.wb_adr_i.value.to_unsigned()
         data = self.ram[addr]
 
 
         # send ack and read data
-        await RisingEdge(self.clk)
-        await ReadWrite()
+        await rising_edge
+        await read_write
         self.wb_ack_o.value = 1
         self.wb_dat_o.value = data
-        await RisingEdge(self.clk)
-        await ReadWrite()
+        await rising_edge
+        await read_write
         self.wb_ack_o.value = 0
         self.wb_dat_o.value = 0
         return data

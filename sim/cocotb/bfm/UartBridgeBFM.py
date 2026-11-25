@@ -12,7 +12,8 @@
 
 import cocotb
 
-class UartDebugBFM:
+
+class UartBridgeBFM:
 
     async def write_cmd(uart_bfm, addr, data, abyte=2, dbyte=2):
         """
