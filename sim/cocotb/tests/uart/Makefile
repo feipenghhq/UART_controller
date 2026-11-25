@@ -13,7 +13,7 @@ VERILOG_SOURCES += $(shell find $(REPO)/rtl/uart -name "*.sv")
 TOPLEVEL = uart_core
 
 # MODULE is the basename of the Python test file
-MODULE = "test_basic"
+MODULE = "test_uart"
 
 # include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim

@@ -38,9 +38,10 @@ logic        frame_error;
 logic        parity_error;
 logic        break_error;
 
-assign cfg_div   = (CLK_FREQ * 1000000) / (16 * BAUD_RATE); // cfg_div = Fclk/(16 * baud)
-assign cfg_txen  = 1;
-assign cfg_rxen  = 1;
+assign cfg_div  = (CLK_FREQ * 1000000) / (16 * BAUD_RATE); // cfg_div = Fclk/(16 * baud)
+assign cfg_txen = 1;
+assign cfg_rxen = 1;
+assign cfg_word = 3;
 assign cfg_stop = 0;
 assign cfg_parity = 0;
 assign cfg_even_parity = 0;

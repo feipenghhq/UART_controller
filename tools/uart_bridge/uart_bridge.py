@@ -14,14 +14,14 @@ Usage = \
 UartDebug(1)
 
 NAME
-    UartDebug.py - Interactive shell to communicate with target FPGA
+    uart_bridge.py - Interactive shell to communicate with target FPGA
 
 SYNOPSIS
-    UartDebug.py
-    UartDebug.py file [addr]
+    uart_bridge.py
+    uart_bridge.py file [addr]
 
 DESCRIPTION
-    This python script communicates with the target FPGA using UART debug
+    This python script communicates with the target FPGA using UART bridge
     interface. It provides an interactive shell for debugging, memory
     access, and programming memory via UART
 
@@ -31,10 +31,10 @@ PREREQUISITES:
         pip install pyserial
 
 USAGE
-    UartDebug.py
+    uart_bridge.py
         Start an interactive shell.
 
-    UartDebug.py file.hex [addr]
+    uart_bridge.py file.hex [addr]
         Program the file to FPGA RAM starting at optional addr (default is 0).
 
 SUPPORTED COMMANDS IN INTERACTIVE SHELL
@@ -233,7 +233,7 @@ class Interpreter():
         return set(s).issubset({'0', '1'})
 
 def parse_args():
-    parser = argparse.ArgumentParser(prog='UartDebug.py', description=Usage, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(prog='uart_bridge.py', description=Usage, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('file', nargs='?',
         help='Hex file to be programmed to the target (optional in interactive mode)'
     )

@@ -1,6 +1,6 @@
 # Uart2wb Implementation
 
-- **uart2wb*- provide wishbone interface access.
+- **uart2wb** provide wishbone interface access.
 - Support wishbone 4b pipeline interface.
 
 ## Implementation

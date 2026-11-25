@@ -1,6 +1,6 @@
 {signal: [
-    {name: 'clk', 		wave: 'p............'},
-    {name: 'uart_rx', 	wave: 'x10333333331x', data: ['D0', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7']},
+    {name: 'clk', 		wave: 'p.............'},
+    {name: 'uart_rx', 	wave: 'x103333333341x', data: ['D0', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'P']},
 ],
    head:{
    text:'Uart ',
