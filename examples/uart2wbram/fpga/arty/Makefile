@@ -13,10 +13,10 @@ VERILOG += $(GIT_ROOT)/rtl/uart/uart_baud.sv
 VERILOG += $(GIT_ROOT)/rtl/uart/uart_rx.sv
 VERILOG += $(GIT_ROOT)/rtl/uart/uart_tx.sv
 VERILOG += $(GIT_ROOT)/rtl/uart/uart_core.sv
-VERILOG += $(GIT_ROOT)/rtl/uart_debug/uart2wb.sv
-VERILOG += $(GIT_ROOT)/rtl/fpga_examples/fpga_uart2wb_ram.sv
-VERILOG += $(GIT_ROOT)/rtl/fpga_examples/wbram1rw.sv
-VERILOG += $(GIT_ROOT)/fpga/arty/uart2wb_ram/top.sv
+VERILOG += $(GIT_ROOT)/rtl/bridge/uart2wb.sv
+VERILOG += $(GIT_ROOT)/examples/uart2wbram/rtl/uart2wbram.sv
+VERILOG += $(GIT_ROOT)/examples/uart2wbram/rtl/wbram1rw.sv
+VERILOG += $(GIT_ROOT)/examples/uart2wbram/fpga/arty/top.sv
 # verilog include directory
 SEARCH  ?=
 # verilog define

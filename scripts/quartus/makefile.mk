@@ -32,6 +32,30 @@ PIN ?=
 # project output directory
 OUT_DIR ?= outputs
 
+# Quartus installations (override these for a different machine).
+QUARTUS_13_ROOT ?= $(HOME)/altera/13.0sp1/quartus
+QUARTUS_24_ROOT ?= $(HOME)/intelFPGA_lite/24.1std/quartus
+
+# Cyclone II uses Quartus 13.0sp1. Override with QUARTUS_VERSION=13 or 24.
+ifneq ($(filter EP2C%,$(PART)),)
+QUARTUS_VERSION ?= 13
+else
+QUARTUS_VERSION ?= 24
+endif
+
+ifeq ($(QUARTUS_VERSION),13)
+QUARTUS_ROOT := $(QUARTUS_13_ROOT)
+# Avoid the parallel Fitter stall observed with 13.0sp1 on this host.
+QUARTUS_PROCESSORS ?= 1
+else ifeq ($(QUARTUS_VERSION),24)
+QUARTUS_ROOT := $(QUARTUS_24_ROOT)
+else
+$(error Unsupported QUARTUS_VERSION '$(QUARTUS_VERSION)'; use 13 or 24)
+endif
+
+QUARTUS_BIN := $(QUARTUS_ROOT)/bin
+export QUARTUS_PROCESSORS
+
 
 export QUARTUS_PART 	= $(PART)
 export QUARTUS_FAMILY 	= $(FAMILY)
@@ -57,16 +81,16 @@ $(OUT_DIR):
 	mkdir -p $(OUT_DIR)
 
 $(SOF): $(OUT_DIR)
-	cd $(OUT_DIR) && quartus_sh --64bit -t $(SCRIPT_DIR)/quartus_build.tcl
+	cd $(OUT_DIR) && "$(QUARTUS_BIN)/quartus_sh" --64bit -t $(SCRIPT_DIR)/quartus_build.tcl
 
 sta: $(OUT_DIR)
-	cd $(OUT_DIR) && quartus_sta --64bit -t $(SCRIPT_DIR)/quartus_sta.tcl
+	cd $(OUT_DIR) && "$(QUARTUS_BIN)/quartus_sta" --64bit -t $(SCRIPT_DIR)/quartus_sta.tcl
 
 pgm: $(SOF)
-	quartus_pgm --mode JTAG -o "p;$(SOF)"
+	"$(QUARTUS_BIN)/quartus_pgm" --mode JTAG -o "p;$(SOF)"
 
 pgmonly:
-	quartus_pgm --mode JTAG -o "p;$(SOF)"
+	"$(QUARTUS_BIN)/quartus_pgm" --mode JTAG -o "p;$(SOF)"
 
 clean:
 	rm -rf $(OUT_DIR)

@@ -8,7 +8,6 @@
 //
 // -------------------------------------------------------------------
 // Top level for the Arty FPGA board
-// Loopback the RX to TX
 // -------------------------------------------------------------------
 
 module top
@@ -20,7 +19,7 @@ module top
     output        UART_TXD
 );
 
-fpga_uart2wb_ram #(.CLK_FREQ(50))
+uart2wbram #(.CLK_FREQ(50))
 u_uart2wb_ram (
     .clk      (CLOCK_50),
     .rst_n    (RESETn),

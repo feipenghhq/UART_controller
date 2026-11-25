@@ -10,7 +10,7 @@
 // A Demo program for FPGA. Use uart2wb to access FPGA on-chip RAM
 // -------------------------------------------------------------------
 
-module fpga_uart2wb_ram #(
+module uart2wbram #(
     parameter ADDR_BYTE = 1,
     parameter DATA_BYTE = 2,
     parameter BAUD_RATE = 115200,

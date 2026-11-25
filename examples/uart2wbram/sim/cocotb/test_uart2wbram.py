@@ -7,22 +7,24 @@
 # Date Created: 08/02/2025
 #
 # -------------------------------------------------------------------
-# Test uart2wb
+# Test uart2wbram
 # -------------------------------------------------------------------
 
 import sys
-sys.path.append('../../tb')
+
+sys.path.append('../../../../sim/cocotb/tb')
+sys.path.append('../../../../sim/cocotb/bfm')
 
 import random
+
 import cocotb
-from cocotb.regression import TestFactory
+from cocotb.clock import Clock
+from Env import generate_reset
+from UartBFM import UartBFM
+from UartBridgeBFM import UartBridgeBFM
 
-from Env import *
-from UartBFM import *
-from UartDebugBFM import *
-from WbDeviceBFM import *
 
-#@cocotb.test()
+@cocotb.parametrize(stall=[0, 1, 2])
 async def test_read(dut, baud=115200, stall=0):
     """
     Test Uart Host read (single)
@@ -35,11 +37,7 @@ async def test_read(dut, baud=115200, stall=0):
     addr = random.randint(0, 255)
     data = random.randint(0, 65535)
     # write
-    await UartDebugBFM.write_cmd(uart, addr, data, abyte=1)
+    await UartBridgeBFM.write_cmd(uart, addr, data, abyte=1)
     # read
-    uart_data = await UartDebugBFM.read_cmd(uart, addr, abyte=1)
+    uart_data = await UartBridgeBFM.read_cmd(uart, addr, abyte=1)
     assert(data == uart_data)
-
-rf = TestFactory(test_read)
-rf.add_option("stall", [0, 1, 2])
-rf.generate_tests()

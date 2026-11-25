@@ -25,6 +25,10 @@ set QUARTUS_DEFINE      $::env(QUARTUS_DEFINE)
 package require ::quartus::project
 project_new $QUARTUS_PRJ -overwrite -part $QUARTUS_PART -family $QUARTUS_FAMILY
 
+if { [info exists ::env(QUARTUS_PROCESSORS)] && $::env(QUARTUS_PROCESSORS) ne "" } {
+    set_global_assignment -name NUM_PARALLEL_PROCESSORS $::env(QUARTUS_PROCESSORS)
+}
+
 # Porject Assignment
 set_global_assignment -name VERILOG_MACRO "SYNTHESIS=1"
 set_global_assignment -name TOP_LEVEL_ENTITY $QUARTUS_TOP

@@ -73,7 +73,7 @@ module uart_tx (
         end
     end
 
-    always @(posedge clk or negedge rst_n) begin
+    always @(posedge clk) begin
         tx_ready <= 1'b0;
         uart_txd <= 1'b1;
         if (baud_tick) bit_cnt <= bit_cnt - 1'b1;
