@@ -29,17 +29,16 @@ module uart16550_reg  (
     output             rx_ready,
     input  [7:0]       rx_data,
     input              parity_error,
-    input              framing_error,
-    input              break_interrupt,
+    input              frame_error,
+    input              break_error,
     input              fifo_overrun,
     output             tx_valid,
     input              tx_ready,
     output logic [7:0] tx_data,
     // Status
     input [4:0]        rx_fifo_count,
-    input [4:0]        fifo_error_count,
+    input [4:0]        rx_fifo_error_count,
     input              tx_fifo_empty,
-    input              transmitter_empty,
     output logic       uart_interrupt
 );
 
@@ -129,7 +128,7 @@ module uart16550_reg  (
             rdata[4] <= break_interrupt_r;
             rdata[5] <= fifo_enable & tx_fifo_empty | ~fifo_enable & ~THR_reg_valid;
             rdata[6] <= (fifo_enable & tx_fifo_empty | ~fifo_enable & ~THR_reg_valid) & tx_ready;
-            rdata[7] <= fifo_enable & (fifo_error_count > 0);
+            rdata[7] <= fifo_enable & (rx_fifo_error_count > 0);
         end
         MSR: rdata <= 0; // Not implemented yet
         SPR: rdata <= register[SPR];
@@ -183,8 +182,8 @@ module uart16550_reg  (
 
             if (rx_valid && rx_ready) begin
                 parity_error_r <= parity_error;
-                framing_error_r <= framing_error;
-                break_interrupt_r <= break_interrupt;
+                framing_error_r <= frame_error;
+                break_interrupt_r <= break_error;
             end
         end
     end
@@ -252,7 +251,7 @@ module uart16550_reg  (
         else begin
             // read ISR clear rcv_line_status
             if (read && addr == ISR) rcv_line_status <= 1'b0;
-            else if (parity_error || overrun_error || framing_error || break_interrupt) rcv_line_status <= 1'b1;
+            else if (parity_error || overrun_error || frame_error || break_error) rcv_line_status <= 1'b1;
         end
     end
 
@@ -280,7 +279,9 @@ module uart16550_reg  (
     assign rcv_data_ready = fifo_enabled ? rx_fifo_trigger : RHR_reg_valid;
 
     // Reception Timeout
+    /* verilator lint_off WIDTHEXPAND */
     assign timeout_limit = 4 * 16 * (1 + cfg_stop + cfg_parity + 5 + cfg_word) * cfg_div;
+    /* verilator lint_on WIDTHEXPAND */
     always_ff @(posedge clk, negedge rst_n) begin
         if (!rst_n) begin
             timer <= -1;
@@ -324,7 +325,7 @@ module uart16550_reg  (
             end
             else begin
                 if (overrun_error) overrun_error_r <= 1'b1;
-                if (parity_error || framing_error || break_interrupt) fifo_data_error_r <= 1'b1;
+                if (parity_error || frame_error || break_error) fifo_data_error_r <= 1'b1;
             end
         end
     end
