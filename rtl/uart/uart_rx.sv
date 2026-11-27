@@ -162,9 +162,9 @@ module uart_rx (
     // final output
     always @(posedge clk) begin
         rx_valid     <= rx_cmpl;
-        break_error  <= ~(|{stop_bit, parity_bit, rx_data}); // all the received bits are zero
-        frame_error  <= ~stop_bit;
-        parity_error <= ~(cfg_even_parity^(cfg_stick_parity ? parity_bit : parity_bit^(^rx_data)));
+        break_error  <= rx_cmpl & ~(|{stop_bit, parity_bit, rx_data}); // all the received bits are zero
+        frame_error  <= rx_cmpl & ~stop_bit;
+        parity_error <= rx_cmpl & ~(cfg_even_parity^(cfg_stick_parity ? parity_bit : parity_bit^(^rx_data)));
     end
 
     // check when stop bit complete

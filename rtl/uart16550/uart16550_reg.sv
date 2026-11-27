@@ -66,6 +66,7 @@ module uart16550_reg  (
     logic LCR_DLAB;
     logic fifo_enabled;
     logic fifo_enable_r;
+    logic [7:0] LSR_comb;
 
     // Register to store RX data
     logic RHR_reg_valid;
@@ -97,6 +98,9 @@ module uart16550_reg  (
     logic overrun_error_r;
     logic fifo_data_error_r;
 
+    logic read_error;
+    logic write_error;
+
     // ------------------------------------------
     // Register field
     // ------------------------------------------
@@ -112,26 +116,21 @@ module uart16550_reg  (
     assign read_RHR = ~LCR_DLAB & read & addr == RHR;
     assign write_THR = !LCR_DLAB & write & addr == THR;
 
+    assign error = read_error | write_error;
+
     // Register read
     always_ff @(posedge clk or negedge clk) begin
+        read_error <= 1'b0;
         case(addr)
         RHR, DLL: rdata <= LCR_DLAB ? divisor_latch[7:0] : fifo_enable ? rx_data : RHR_reg;
         IER, DLM: rdata <= LCR_DLAB ? divisor_latch[15:8] : register[IER];
         ISR: rdata <= {fifo_enabled, fifo_enabled, 2'b0, interrupt_code, interrupt_status};
         LCR: rdata <= register[LCR];
         MCR: rdata <= register[MCR];
-        LSR: begin
-            rdata[0] <= fifo_enable & rx_valid | ~fifo_enable & RHR_reg_valid;
-            rdata[1] <= overrun_error_r;
-            rdata[2] <= parity_error_r;
-            rdata[3] <= framing_error_r;
-            rdata[4] <= break_interrupt_r;
-            rdata[5] <= fifo_enable & tx_fifo_empty | ~fifo_enable & ~THR_reg_valid;
-            rdata[6] <= (fifo_enable & tx_fifo_empty | ~fifo_enable & ~THR_reg_valid) & tx_ready;
-            rdata[7] <= fifo_enable & (rx_fifo_error_count > 0);
-        end
+        LSR: rdata <= LSR_comb;
         MSR: rdata <= 0; // Not implemented yet
         SPR: rdata <= register[SPR];
+        default: read_error <= read;
         endcase
     end
 
@@ -139,8 +138,10 @@ module uart16550_reg  (
     always_ff @(posedge clk or negedge clk) begin
         if (!rst_n) begin
             register <= 0;
+            write_error <= 1'b0;
         end
         else if (write) begin
+            write_error <= 1'b0;
             register[FCR][1] <= 0; // RX FIFO reset - return to 0 automatically
             register[FCR][2] <= 0; // TX FIFO reset - return to 0 automatically
             case(addr)
@@ -153,6 +154,7 @@ module uart16550_reg  (
             LCR: register[LCR] <= wdata;
             MCR: register[MCR] <= wdata;
             SPR: register[SPR] <= wdata;
+            default write_error <= 1'b1;
             endcase
         end
     end
@@ -233,6 +235,8 @@ module uart16550_reg  (
     assign fifo_reset_tx = register[FCR][1] | fifo_enable ^ fifo_enable_r;
     assign fifo_reset_rx = register[FCR][2] | fifo_enable ^ fifo_enable_r;
 
+    assign cfg_div = divisor_latch;
+
     assign cfg_word = register[LCR][1:0];
     assign cfg_stop = register[LCR][2];
     assign cfg_parity = register[LCR][3];
@@ -260,10 +264,10 @@ module uart16550_reg  (
                                 reception_timeout |
                                 tx_holding_empty & register[IER][1]);
 
-    assign interrupt_code = rcv_line_status   ? 3'b011 :
-                            rcv_data_ready    ? 3'b010 :
-                            reception_timeout ? 3'b110 :
-                            tx_holding_empty  ? 3'b001 :
+    assign interrupt_code = rcv_line_status  & register[IER][2] ? 3'b011 :
+                            rcv_data_ready   & register[IER][0] ? 3'b010 :
+                            reception_timeout                   ? 3'b110 :
+                            tx_holding_empty & register[IER][1] ? 3'b001 :
                             0;
 
     // Receiver Data Ready
@@ -329,5 +333,14 @@ module uart16550_reg  (
             end
         end
     end
+
+    assign LSR_comb[0] = fifo_enable & rx_valid | ~fifo_enable & RHR_reg_valid;
+    assign LSR_comb[1] = overrun_error_r;
+    assign LSR_comb[2] = parity_error_r;
+    assign LSR_comb[3] = framing_error_r;
+    assign LSR_comb[4] = break_interrupt_r;
+    assign LSR_comb[5] = fifo_enable & tx_fifo_empty | ~fifo_enable & ~THR_reg_valid;
+    assign LSR_comb[6] = (fifo_enable & tx_fifo_empty | ~fifo_enable & ~THR_reg_valid) & tx_ready;
+    assign LSR_comb[7] = fifo_enable & (rx_fifo_error_count > 0);
 
 endmodule

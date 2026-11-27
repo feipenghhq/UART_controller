@@ -31,6 +31,13 @@ async def generate_reset(dut):
     dut.rst_n.value = 1
     await RisingEdge(dut.clk)
 
+async def generate_clock(dut, period=10):
+    cocotb.start_soon(Clock(dut.clk, period, unit = 'ns').start())
+
+async def generate_reset_and_clock(dut, period=10):
+    cocotb.start_soon(Clock(dut.clk, period, unit = 'ns').start()) # clock
+    await generate_reset(dut)
+
 async def init(dut, period=10, baud=115200, word=3, stop=0, parity=0, even_parity=0, stick_parity=0, break_=0):
     """
     Initialize the environment:
@@ -60,5 +67,4 @@ async def init(dut, period=10, baud=115200, word=3, stop=0, parity=0, even_parit
     dut.cfg_div.value = calculate_div(baud, period)
 
     # clock and reset
-    cocotb.start_soon(Clock(dut.clk, period, unit = 'ns').start()) # clock
-    await generate_reset(dut)
+    await generate_reset_and_clock(dut, period)
