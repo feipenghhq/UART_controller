@@ -14,7 +14,7 @@ VERILOG_SOURCES += $(shell find $(REPO)/rtl/uart16550 -name "*.sv")
 TOPLEVEL = apb_uart16550
 
 # MODULE is the basename of the Python test file
-MODULE = "test_basic"
+MODULE = "test_sanity, test_uart"
 
 # include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim

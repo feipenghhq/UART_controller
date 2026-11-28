@@ -154,6 +154,8 @@ module uart_rx (
                     stop_bit_stored <= 1'b1;
                 end
                 rx_cmpl <= stop_cmpl;
+                // Adjust the data when width is not 8
+                if (stop_cmpl) rx_data <= rx_data >> (3 - cfg_word);
             end
             default: begin end
         endcase

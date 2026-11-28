@@ -4,10 +4,12 @@
 #
 # Project: UART Controller
 # Author: Heqing Huang
-# Date Created: 06/25/2025
+# Date Created: 11/26/2026
 #
 # -------------------------------------------------------------------
-# Loop back test for Uart
+# Basic sanity check
+# - Register Access
+# - Basic UART send and receive
 # -------------------------------------------------------------------
 
 import random
@@ -23,7 +25,9 @@ from APBBFM import APB_Host
 from APBUart16550BFM import APBUart16550BFM, Reg
 from Env import calculate_div, generate_reset_and_clock
 from UartBFM import UartBFM
+from UartConfig import UartConfig
 
+config = UartConfig
 
 @cocotb.test()
 async def test_register(dut):
@@ -70,9 +74,8 @@ async def test_register(dut):
 
 @cocotb.test()
 async def test_tx_nonfifo(dut):
-    uart16550 = APBUart16550BFM(dut)
+    uart16550 = APBUart16550BFM(dut, config)
     await uart16550.setup()
-    await uart16550.config_lcr()
     receive = cocotb.start_soon(uart16550.uart.receive())
     await uart16550.write(0xbf)
     data = await receive
@@ -80,7 +83,7 @@ async def test_tx_nonfifo(dut):
 
 @cocotb.test()
 async def test_rx_nonfifo(dut):
-    uart16550 = APBUart16550BFM(dut)
+    uart16550 = APBUart16550BFM(dut, config)
     await uart16550.setup()
     await uart16550.config_lcr()
     # Send from uart
@@ -90,3 +93,4 @@ async def test_rx_nonfifo(dut):
     await send
     data = await read
     assert data == 0xfb
+

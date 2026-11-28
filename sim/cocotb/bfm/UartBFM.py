@@ -21,7 +21,7 @@ class UartBFM:
         self.parity = parity
         self.even_parity = even_parity
         self.stick_parity = stick_parity
-        self.break_ = break_
+        self.break_ = break_    # FIXME: Need to add break check
         self.info = info
 
         # time interval for each uart transfer bit (in ns)
@@ -47,11 +47,12 @@ class UartBFM:
         """
         Send a data through Uart
         """
-        parity = (data.bit_count() & 1) ^ self.even_parity
+
+        data &= (1 << self.data_cnt) - 1 # Mask the data with corresponding width
+        parity = (data.bit_count() & 1) ^ (1 - self.even_parity)
 
         timer_one_baud = Timer(self.interval, unit="ns")
         read_write = ReadWrite()
-
         if self.info:
             self.txd._log.info(f"[UART BFM] Start sending byte {hex(data)}")
 
@@ -100,14 +101,14 @@ class UartBFM:
         await Timer(self.interval/2, unit='ns')
 
         # Receive the data, lsb is received first
-        for _ in range(8):
+        for _ in range(self.data_cnt):
             await timer_one_baud
             bit = int(self.txd.value)
-            data = (data >> 1) | (bit << 7)
+            data = data | (bit << _)
             if debug:
                 self.txd._log.info(f"[UartBFM] Received bit {_}: {bit}")
 
-        # send parity
+        # receive parity
         if self.parity:
             await timer_one_baud
             parity_bit = int(self.txd.value)

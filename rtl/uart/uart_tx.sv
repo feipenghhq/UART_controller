@@ -43,6 +43,7 @@ module uart_tx (
     logic baud_clear;
     logic parity_bit;
 
+    logic [7:0] tx_data_mask;
     logic [7:0] buffer;
     logic [2:0] bit_cnt;
 
@@ -58,6 +59,8 @@ module uart_tx (
     assign req = tx_valid & tx_ready & enable;
     assign bit_cnt_cmpl = (bit_cnt == 0) & baud_tick;
     assign baud_clear = (state == IDLE) & req;
+
+    assign tx_data_mask = tx_data & (8'hFF >> (3 - cfg_word));
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) state <= IDLE;
@@ -80,10 +83,10 @@ module uart_tx (
         case(state)
             IDLE: begin
                 uart_txd <= 1'b1;
-                buffer <= tx_data;
+                buffer <= tx_data_mask;
                 tx_ready <= ~req & enable;
                 bit_cnt <= 0;
-                parity_bit <= (^tx_data) ^ cfg_even_parity;
+                parity_bit <= (^tx_data_mask) ^ ~cfg_even_parity;
             end
             START: begin
                 uart_txd <= 1'b0;
